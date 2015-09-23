@@ -22,21 +22,41 @@
 #include "main.h"
 #include "../keytable.h"
 
-#define KEYB_PORT PORTD
-#define KEYB_DDR DDRD
-#define KEYB_CLK 0
-#define KEYB_DATA 1
-#define KEYB_INT INT1
+#if BOARD == BOARD_MINIMUS
+    #define KEYB_PORT PORTD
+    #define KEYB_DDR DDRD
+    #define KEYB_CLK 0
+    #define KEYB_DATA 1
+    #define KEYB_INT INT1
+    
+    #define MOUSEMV_PORT PORTB
+    #define MOUSEMV_DDR DDRB
+    #define MOUSEMV_MASK 0xf0
+    #define MOUSEMV_OFFSET 4
+    
+    #define MOUSEBTN_PORT PORTC
+    #define MOUSEBTN_DDR DDRC
+    #define MOUSEBTN_MASK 0x70
+    #define MOUSEBTN_OFFSET 4
 
-#define MOUSEMV_PORT PORTB
-#define MOUSEMV_DDR DDRB
-#define MOUSEMV_MASK 0xf0
-#define MOUSEMV_OFFSET 4
-
-#define MOUSEBTN_PORT PORTC
-#define MOUSEBTN_DDR DDRC
-#define MOUSEBTN_MASK 0x70
-#define MOUSEBTN_OFFSET 4
+// Pro Micro, suppport files in Board directory
+#elif BOARD == BOARD_USER
+    #define KEYB_PORT PORTD
+    #define KEYB_DDR DDRD
+    #define KEYB_CLK 0
+    #define KEYB_DATA 1
+    #define KEYB_INT INT1
+    
+    #define MOUSEMV_PORT PORTF
+    #define MOUSEMV_DDR DDRF
+    #define MOUSEMV_MASK 0xf0
+    #define MOUSEMV_OFFSET 4
+    
+    #define MOUSEBTN_PORT PORTB
+    #define MOUSEBTN_DDR DDRB
+    #define MOUSEBTN_MASK 0x70
+    #define MOUSEBTN_OFFSET 4
+#endif
 
 volatile uint8_t got_sync;
 
