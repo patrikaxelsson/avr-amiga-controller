@@ -36,8 +36,8 @@ include $(LUFA_PATH)/Build/lufa_avrdude.mk
 include $(LUFA_PATH)/Build/lufa_atprogram.mk
 
 flash: $(TARGET).hex
-	dfu-programmer atmega32u2 erase
-	dfu-programmer atmega32u2 flash $(TARGET).hex
-	dfu-programmer atmega32u2 start
+	dfu-programmer $(MCU) erase
+	dfu-programmer $(MCU) flash $(TARGET).hex
+	dfu-programmer $(MCU) start
 
 

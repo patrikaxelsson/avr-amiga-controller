@@ -22,21 +22,37 @@
 #include "main.h"
 #include "../keytable.h"
 
+#define KEYB_PORT PORTD
+#define KEYB_DDR DDRD
+#define KEYB_CLK 0
+#define KEYB_DATA 1
+#define KEYB_INT INT1
+
+#define MOUSEMV_PORT PORTB
+#define MOUSEMV_DDR DDRB
+#define MOUSEMV_MASK 0xf0
+#define MOUSEMV_OFFSET 4
+
+#define MOUSEBTN_PORT PORTC
+#define MOUSEBTN_DDR DDRC
+#define MOUSEBTN_MASK 0x70
+#define MOUSEBTN_OFFSET 4
+
 volatile uint8_t got_sync;
 
 inline static void kclock(void) {
     _delay_us(20);
-    PORTD &= 0xfe;
+    KEYB_PORT &= ~_BV(KEYB_CLK);
     _delay_us(20);
-    PORTD |= 0x01;
+    KEYB_PORT |= _BV(KEYB_CLK);
     _delay_us(20);
 }
 
 inline static void kdat(uint8_t b) {
     if(b)
-        PORTD &= 0xfd;
+        KEYB_PORT &= ~_BV(KEYB_DATA);
     else
-        PORTD |= 0x02;
+        KEYB_PORT |= _BV(KEYB_DATA);
     kclock();
 }
 
@@ -44,32 +60,32 @@ inline static void kdat(uint8_t b) {
 ISR(INT1_vect)
 {
     got_sync = 1;
-    EIMSK &= ~_BV(1); // disable INT1
+    EIMSK &= ~_BV(KEYB_INT); // disable INT1
 } 
 
 uint8_t sync(void) {
-    EIMSK &= ~_BV(1); // disable INT1
-    PORTD &= ~_BV(1);
-    DDRD &= ~_BV(1);
+    EIMSK &= ~_BV(KEYB_INT); // disable INT1
+    KEYB_PORT &= ~_BV(KEYB_DATA);
+    KEYB_DDR &= ~_BV(KEYB_DATA);
     _delay_us(20);
-    EIFR = 2; // clear INT1 interrupt
+    EIFR = _BV(KEYB_INT); // clear INT1 interrupt
     got_sync = 0;
-    EIMSK |= 2; // enable INT1
+    EIMSK |= _BV(KEYB_INT); // enable INT1
     _delay_us(170);
     if(got_sync) return true;
 
     while(1)
     {
-        EIMSK &= ~_BV(1); // disable INT1
-        PORTD &= ~_BV(1);
-        DDRD |= _BV(1);
+        EIMSK &= ~_BV(KEYB_INT); // disable INT1
+        KEYB_PORT &= ~_BV(KEYB_DATA);
+        KEYB_DDR |= _BV(KEYB_DATA);
         kclock();
-        DDRD &= ~_BV(1);
-        PORTD |= _BV(1);
+        KEYB_DDR &= ~_BV(KEYB_DATA);
+        KEYB_PORT |= _BV(KEYB_DATA);
         _delay_us(20);
-        EIFR = 2;
+        EIFR = _BV(KEYB_INT);
         got_sync = 0;
-        EIMSK |= _BV(1); // enable INT1
+        EIMSK |= _BV(KEYB_INT); // enable INT1
         _delay_us(120);
         if(got_sync) return false;
     }
@@ -95,15 +111,15 @@ void mouse(void)
     else if(dy > 0) { dy--; yc++; }
     tmp = ((xc>>1)&3) | (((yc>>1)&3)<<2);
     tmp ^= (tmp>>1)&5;
-    DDRB = (DDRB & 0x0f) | (tmp << 4);
+    MOUSEMV_DDR = (MOUSEMV_DDR & ~MOUSEMV_MASK) | (tmp << MOUSEMV_OFFSET);
     _delay_us(100);
 }
 
 void keyboard(uint8_t k)
 {
     if(k == 0xff) return;
-    PORTD |= _BV(1);
-    DDRD |= _BV(1);
+    KEYB_PORT |= _BV(KEYB_DATA);
+    KEYB_DDR |= _BV(KEYB_DATA);
     kdat((k>>6)&1);
     kdat((k>>5)&1);
     kdat((k>>4)&1);
@@ -112,8 +128,8 @@ void keyboard(uint8_t k)
     kdat((k>>1)&1);
     kdat((k>>0)&1);
     kdat((k>>7)&1);
-    if(sync()) PORTD^=0x40;
-    else PORTD^=0x20;
+    if(sync()) LEDs_ToggleLEDs(LEDS_LED2);
+    else LEDs_ToggleLEDs(LEDS_LED1);
 }
 
 
@@ -127,18 +143,16 @@ void SetupHardware(void)
     /* Disable clock division */
     clock_prescale_set(clock_div_1);
 
-    DDRC  &= 0x0f;
-    PORTC &= 0x0f;
-    DDRB  &= 0x0f;
-    PORTB &= 0x0f;
-// PD0 = clock
-// PD1 = data
-    DDRD  |= 0x01;
-    PORTD |= 0x01;
+    MOUSEBTN_DDR &= ~MOUSEBTN_MASK;
+    MOUSEBTN_PORT &= ~MOUSEBTN_MASK;
+    MOUSEMV_DDR &= ~MOUSEMV_MASK;
+    MOUSEMV_PORT &= ~MOUSEMV_MASK;
 
-    EIMSK &= ~_BV(1); // disable INT1
-    EICRA &= 0xf3; // INT1 interrupt on low level
-    EIFR = 2; // clear INT1 interrupt
+    KEYB_DDR  |= _BV(KEYB_CLK);
+    KEYB_PORT |= _BV(KEYB_CLK);
+
+    EIMSK &= ~_BV(KEYB_INT); // disable INT1
+    EIFR = _BV(KEYB_INT); // clear INT1 interrupt
 
     sei();
     sync();
@@ -201,15 +215,15 @@ void EVENT_USB_Device_ControlRequest(void)
             Endpoint_ClearIN();
             break;
         case REQ_MOUSE_BTN:
-            DDRC = (DDRC & 0x0f) | (USB_ControlRequest.wValue << 4);
+            MOUSEBTN_DDR = (MOUSEBTN_DDR & ~MOUSEBTN_MASK) | (USB_ControlRequest.wValue << MOUSEBTN_OFFSET);
             Endpoint_ClearSETUP();
             Endpoint_ClearIN();
             break;
         case REQ_KEYBOARD:
             if(USB_ControlRequest.wValue == 115 && USB_ControlRequest.wIndex) {
-                PORTD &= 0xfe;
+                KEYB_PORT &= ~_BV(KEYB_CLK);
                 _delay_ms(500);
-                PORTD |= 0x01;
+                KEYB_PORT |= _BV(KEYB_CLK);
             }
             if(USB_ControlRequest.wValue < 0xa0) {
                 keyboard(keycodes[USB_ControlRequest.wValue] | (USB_ControlRequest.wIndex ? 0x00 : 0x80));
