@@ -8,7 +8,7 @@ uint8_t keycodes[0xA0] = {
     0xff, // 06 
     0xff, // 07 
     0xff, // 08 
-    0xff, // 09 
+    0x45, // 09 
     0x01, // 0A 1
     0x02, // 0B 2
     0x03, // 0C 3
@@ -62,10 +62,10 @@ uint8_t keycodes[0xA0] = {
     0x39, // 3C .
     0x3a, // 3D /
     0x61, // 3E rshift
-    0xff, // 3F 
+    0x5d, // 3F 
     0x64, // 40 lalt
     0x40, // 41 space
-    0xff, // 42 
+    0x62, // 42 capslock
     0x50, // 43 F1
     0x51, // 44 F2
     0x52, // 45 F3
@@ -78,19 +78,19 @@ uint8_t keycodes[0xA0] = {
     0x59, // 4C F10
     0xff, // 4D 
     0xff, // 4E 
-    0xff, // 4F 
-    0xff, // 50 
-    0xff, // 51 
-    0xff, // 52 
-    0xff, // 53 
-    0xff, // 54 
-    0xff, // 55 
-    0xff, // 56 
-    0xff, // 57 
-    0xff, // 58 
-    0xff, // 59 
-    0xff, // 5A 
-    0xff, // 5B 
+    0x3d, // 4F numpad 7
+    0x3e, // 50 numpad 8
+    0x3f, // 51 numpad 9
+    0x4a, // 52 numpad -
+    0x2d, // 53 numpad 4
+    0x2e, // 54 numpad 5
+    0x2f, // 55 numpad 6
+    0x5e, // 56 numpad +
+    0x1d, // 57 numpad 1
+    0x1e, // 58 numpad 2
+    0x1f, // 59 numpad 3
+    0x0f, // 5A numpad 0
+    0x3c, // 5B numpad .
     0xff, // 5C 
     0xff, // 5D 
     0x30, // 5E |
@@ -103,21 +103,21 @@ uint8_t keycodes[0xA0] = {
     0xff, // 65 
     0xff, // 66 
     0xff, // 67 
-    0xff, // 68 
+    0x43, // 68 numpad enter
     0xff, // 69 
-    0xff, // 6A 
+    0x5c, // 6A numpad /
     0xff, // 6B 
     0x65, // 6C altgr
     0xff, // 6D 
     0xff, // 6E 
-    0xff, // 6F 
+    0x4c, // 6F curs up
     0xff, // 70 
-    0xff, // 71 
-    0xff, // 72 
+    0x4f, // 71 curs left
+    0x4e, // 72 curs right
     0xff, // 73 
-    0xff, // 74 
+    0x4d, // 74 curs down
     0xff, // 75 
-    0xff, // 76 
+    0x5f, // 76 help
     0x46, // 77 del
     0xff, // 78 
     0xff, // 79 
