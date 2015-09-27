@@ -20,7 +20,6 @@
 #include <util/delay.h>
 
 #include "main.h"
-#include "../keytable.h"
 
 #if BOARD == BOARD_MINIMUS
     #define KEYB_PORT PORTD
@@ -219,13 +218,18 @@ void EVENT_USB_Device_ConfigurationChanged(void)
     LEDs_SetAllLEDs(ConfigSuccess ? LEDMASK_USB_READY : LEDMASK_USB_ERROR);
 }
 
-
-
 void EVENT_USB_Device_ControlRequest(void)
 {
-//    unsigned char buf[0x4] = {0, 1, 2, 3};
+    const uint8_t keyMask = 0x7f;
+    const uint8_t keyUpMask = 0x80;
+    const uint8_t isModifierMask = 0x60;
+    const uint8_t modifierNumMask = 0x07;
 
-    static uint8_t hmm = 0;
+    const uint8_t keyCtrl = 0x63;
+    const uint8_t keyLeftAmiga = 0x66;
+    const uint8_t keyRightAmiga = 0x67;
+    const uint8_t rebootModifiersMask = _BV(keyCtrl & modifierNumMask) | _BV(keyLeftAmiga | modifierNumMask) | _BV(keyRightAmiga | modifierNumMask);
+    static uint8_t modifiers = 0x00;
 
     switch (USB_ControlRequest.bmRequestType) {
     case 0x40:
@@ -244,12 +248,18 @@ void EVENT_USB_Device_ControlRequest(void)
             Endpoint_ClearIN();
             break;
         case REQ_KEYBOARD:
-            if(USB_ControlRequest.wValue == 115 && USB_ControlRequest.wIndex) {
+            if ((USB_ControlRequest.wValue & (keyMask & ~modifierNumMask)) == isModifierMask) {
+                uint8_t modifierBit = _BV(USB_ControlRequest.wValue & modifierNumMask);
+                if(USB_ControlRequest.wValue & keyUpMask)
+                    modifiers &= ~modifierBit;
+                else
+                    modifiers |= modifierBit;
+            }
+
+            if ((modifiers & rebootModifiersMask) == rebootModifiersMask)
                 reset();
-            }
-            if(USB_ControlRequest.wValue < 0xa0) {
-                keyboard(keycodes[USB_ControlRequest.wValue] | (USB_ControlRequest.wIndex ? 0x00 : 0x80));
-            }
+
+            keyboard(USB_ControlRequest.wValue);
             Endpoint_ClearSETUP();
             Endpoint_ClearIN();
             break;

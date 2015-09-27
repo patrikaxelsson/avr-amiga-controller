@@ -32,6 +32,7 @@
 #include <usb.h>
 
 #include "../common.h"
+#include "../keytable.h"
 
 int sockfd, portno;
 struct sockaddr_in serv_addr;
@@ -211,10 +212,28 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
                 uSynergyBool repeat)
 {
+    const uint8_t amigaKeyUpMask = 0x80;
+    const uint8_t amigaCapsLock = 0x62;
     int result;
-    result = usb_request(REQ_KEYBOARD, key, down);
-    printf("keyboard, key=%2x down=%d repeat=%d - %d\n", key, down, repeat, result);
+    if (!repeat && key < sizeof(keycodes)) {
+        uint8_t amigaKey = keycodes[key] | (down ? 0x00 : amigaKeyUpMask);
+        if (amigaKey != 0xff) {
+            if ((amigaKey & ~amigaKeyUpMask) == amigaCapsLock) {
+                if (down) {
+                    // If caps lock is pressed down and modifier did not say caps lock was already set, then
+                    // send caps down to amiga, else send caps up
+                    uint8_t amigaCapsLockKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? amigaKeyUpMask : 0x00;
+                    amigaKey |= amigaCapsLockKeyUp;
+                }
+                else {
+                    return;
+                }
+            }
 
+            result = usb_request(REQ_KEYBOARD, amigaKey, 0);
+            printf("keyboard, key=%2x down=%d modifiers = %4x amigaKey=%2x - %d\n", key, down, modifiers, amigaKey, result);
+        }
+    }
 }
 
 void s_joystick(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons,
