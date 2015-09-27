@@ -228,7 +228,7 @@ void EVENT_USB_Device_ControlRequest(void)
     const uint8_t keyCtrl = 0x63;
     const uint8_t keyLeftAmiga = 0x66;
     const uint8_t keyRightAmiga = 0x67;
-    const uint8_t rebootModifiersMask = _BV(keyCtrl & modifierNumMask) | _BV(keyLeftAmiga | modifierNumMask) | _BV(keyRightAmiga | modifierNumMask);
+    const uint8_t rebootModifiersMask = _BV(keyCtrl & modifierNumMask) | _BV(keyLeftAmiga & modifierNumMask) | _BV(keyRightAmiga & modifierNumMask);
     static uint8_t modifiers = 0x00;
 
     switch (USB_ControlRequest.bmRequestType) {
@@ -256,8 +256,12 @@ void EVENT_USB_Device_ControlRequest(void)
                     modifiers |= modifierBit;
             }
 
-            if ((modifiers & rebootModifiersMask) == rebootModifiersMask)
+            if ((modifiers & rebootModifiersMask) == rebootModifiersMask) {
                 reset();
+                // Reset modifiers as usb device gets locked up on sync() as it works now and
+                // will miss releae of the modifiers
+                modifiers = 0x00;
+            }
 
             keyboard(USB_ControlRequest.wValue);
             Endpoint_ClearSETUP();
