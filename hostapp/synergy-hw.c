@@ -209,30 +209,58 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
     printf("mouse, rel=%d, %d - %d\n", x, y, result);
 }
 
+int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
+    const uint8_t amigaKeyUpMask = 0x80;
+    int result;;
+    
+    result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
+    printf("send_amiga_key, amigaKey=%2x keyUp=%d - %d\n", amigaKey, keyUp, result);
+}
+
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
                 uSynergyBool repeat)
 {
-    const uint8_t amigaKeyUpMask = 0x80;
+    const uint8_t amigaLeftShift = 0x60;
     const uint8_t amigaCapsLock = 0x62;
-    int result;
-    if (!repeat && key < sizeof(keycodes)) {
-        uint8_t amigaKey = keycodes[key] | (down ? 0x00 : amigaKeyUpMask);
-        if (amigaKey != 0xff) {
-            if ((amigaKey & ~amigaKeyUpMask) == amigaCapsLock) {
-                if (down) {
-                    // If caps lock is pressed down and modifier did not say caps lock was already set, then
-                    // send caps down to amiga, else send caps up
-                    uint8_t amigaCapsLockKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? amigaKeyUpMask : 0x00;
-                    amigaKey |= amigaCapsLockKeyUp;
-                }
-                else {
-                    return;
-                }
-            }
+    const uint8_t amigaCursorDown = 0x4d;
+    const uint8_t amigaCursorUp = 0x4c;
+    const uint8_t amigaCursorLeft = 0x4f;
+    const uint8_t amigaCursorRight = 0x4e;
 
-            result = usb_request(REQ_KEYBOARD, amigaKey, 0);
-            printf("keyboard, key=%2x down=%d modifiers = %4x amigaKey=%2x - %d\n", key, down, modifiers, amigaKey, result);
+    if (!repeat) {
+        switch (key) {
+            case 0x75: // Page down
+                usb_send_amiga_key(amigaLeftShift, !down);
+                usb_send_amiga_key(amigaCursorDown, !down);
+                break;
+            case 0x70: // Page up
+                usb_send_amiga_key(amigaLeftShift, !down);
+                usb_send_amiga_key(amigaCursorUp, !down);
+                break;
+            case 0x6e: // Home
+                usb_send_amiga_key(amigaLeftShift, !down);
+                usb_send_amiga_key(amigaCursorLeft, !down);
+                break;
+            case 0x73: // End
+                usb_send_amiga_key(amigaLeftShift, !down);
+                usb_send_amiga_key(amigaCursorRight, !down);
+                break;
+            case 0x42: // Caps lock
+                if (down) {
+                    // If caps lock is pressed down and modifiers has not caps lock set, then
+                    // send caps down to amiga, else send caps up
+                    uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
+                    usb_send_amiga_key(amigaLeftShift, capsKeyUp);
+                }
+                break;
+            default:
+                if (key < sizeof(keycodes)) {
+                    uint8_t amigaKey = keycodes[key];
+                    if (amigaKey != 0xff)
+                        usb_send_amiga_key(amigaKey, !down);
+                }
         }
+        printf("keyboard, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
     }
 }
 
