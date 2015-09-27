@@ -152,7 +152,12 @@ void keyboard(uint8_t k)
     else LEDs_ToggleLEDs(LEDS_LED1);
 }
 
-
+void reset(void)
+{
+    KEYB_PORT &= ~_BV(KEYB_CLK);
+    _delay_ms(500);
+    KEYB_PORT |= _BV(KEYB_CLK);
+}
 
 void SetupHardware(void)
 {
@@ -241,9 +246,7 @@ void EVENT_USB_Device_ControlRequest(void)
             break;
         case REQ_KEYBOARD:
             if(USB_ControlRequest.wValue == 115 && USB_ControlRequest.wIndex) {
-                KEYB_PORT &= ~_BV(KEYB_CLK);
-                _delay_ms(500);
-                KEYB_PORT |= _BV(KEYB_CLK);
+                reset();
             }
             if(USB_ControlRequest.wValue < 0xa0) {
                 keyboard(keycodes[USB_ControlRequest.wValue] | (USB_ControlRequest.wIndex ? 0x00 : 0x80));
