@@ -112,13 +112,13 @@ uSynergyBool s_connect(uSynergyCookie cookie)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         perror("No sock");
-        exit(0);
+        return USYNERGY_FALSE;
     }
 
     server = gethostbyname("localhost");
     if (server == NULL) {
         perror("DNS fail");
-        exit(0);
+        return USYNERGY_FALSE;
     }
 
     bzero((char *)&serv_addr, sizeof(serv_addr));
@@ -129,7 +129,7 @@ uSynergyBool s_connect(uSynergyCookie cookie)
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connect failed");
-        exit(0);
+        USYNERGY_FALSE;
     }
 
     printf("connect\n");
@@ -144,7 +144,7 @@ uSynergyBool s_send(uSynergyCookie cookie, const uint8_t * buffer, int length)
     n = write(sockfd, buffer, length);
     if (n < 0) {
         perror("Write failed:");
-        exit(0);
+        return USYNERGY_FALSE;
     }
     return USYNERGY_TRUE;
 }
@@ -157,7 +157,7 @@ uSynergyBool s_receive(uSynergyCookie cookie, uint8_t * buffer, int maxLength,
     *outLength = read(sockfd, buffer, maxLength);
     if (*outLength < 0) {
         perror("Read failed:");
-        exit(0);
+        return USYNERGY_FALSE;
     }
     return USYNERGY_TRUE;
 }
