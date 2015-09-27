@@ -183,7 +183,6 @@ void SetupHardware(void)
     sync();
     keyboard(0xfd);
     keyboard(0xfe);
-    keyboard(0x35);
     cli();
 
     LEDs_Init();
