@@ -107,6 +107,14 @@ int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
     return result;
 }
 
+int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
+    const uint8_t amigaKeyUpMask = 0x80;
+    int result;
+    
+    result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
+    printf("send_amiga_key, amigaKey=%2x keyUp=%d - %d\n", amigaKey, keyUp, result);
+}
+
 uSynergyBool s_connect(uSynergyCookie cookie)
 {
 
@@ -183,6 +191,14 @@ void s_trace(uSynergyCookie cookie, const char *text)
 void s_screenActive(uSynergyCookie cookie, uSynergyBool active)
 {
     printf("screenActive, active=%d\n", active);
+    
+    // Hack for releasing any modifier keys used when switching from Amiga to PC
+    if (active == 0) {
+        uint8_t amigaModifierKey;
+        for (amigaModifierKey = 0x60; amigaModifierKey < 0x68; amigaModifierKey++) {
+            usb_send_amiga_key(amigaModifierKey, 1);
+        }
+    }
 }
 
 void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
@@ -207,14 +223,6 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
     int result;
     result = usb_request(REQ_MOUSE_REL, x, y);
     printf("mouse, rel=%d, %d - %d\n", x, y, result);
-}
-
-int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
-    const uint8_t amigaKeyUpMask = 0x80;
-    int result;;
-    
-    result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
-    printf("send_amiga_key, amigaKey=%2x keyUp=%d - %d\n", amigaKey, keyUp, result);
 }
 
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
