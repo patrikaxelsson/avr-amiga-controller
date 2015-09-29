@@ -11,8 +11,9 @@ It works as follows:
  - You configure a hotkey to switch to screen "amiga".
  - The input from PC is redirected to the synergy-hw client
       (Find this in the hostapp directory.)
- - The firmware is flashed to an Atmega32U2 board 
-      (such as minimus 32 AVR)
+ - The firmware is flashed to an Atmega32U2 or Atmega32U4 board 
+      (such as Minimus 32 AVR or Pro Micro (with LUFA Bootloader - 
+	   http://www.stanleylio.com/home/usblufa))
  - synergy-hw streams input to the AVR.
  - The AVR emulates bus mouse and amiga keyboard signals 
        (at hardware level)
@@ -20,20 +21,20 @@ It works as follows:
 Of course, you also need to build correct cabling to connect the AVR
 to the Amiga keyboard and mouse ports. The mapping is like this
 
-AVR           Amiga (Bus Mouse) Mouse port
-PB4           XA
-PB5           XB
-PB6           YA 
-PB7           YB
-PC4           LEFT MOUSE BUTTON
-PC5           RIGHT MOUSE BUTTON
-PC6           MIDDLE MOUSE BUTTON
-GND           GND
+Minimus   Pro Micro    Amiga (Bus Mouse) Mouse port
+PB4       PF4          H(XA)
+PB5       PF5          HQ(XB)
+PB6       PF6          V(YA)
+PB7       PF7          VQ(YB)
+PC4       PB4          LEFT MOUSE BUTTON
+PC5       PB5          RIGHT MOUSE BUTTON
+PC6       PB6          MIDDLE MOUSE BUTTON
+GND       GND          GND
 
-AVR           Amiga Keyboard Port
-PD0           CLOCK
-PD1           DATA
-GND           GND
+AVR       AVR          Amiga Keyboard Port
+PD0       PD0          CLOCK
+PD1       PD1          DATA
+GND       GND          GND
 
 To compile it, you need to get LUFA library and put the path in
 the firmware/Makefile. Then run make from top level to build both
