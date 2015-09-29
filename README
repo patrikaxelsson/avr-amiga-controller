@@ -31,7 +31,7 @@ PC5       PB5          RIGHT MOUSE BUTTON
 PC6       PB6          MIDDLE MOUSE BUTTON
 GND       GND          GND
 
-AVR       AVR          Amiga Keyboard Port
+Minumus   Pro Micro    Amiga Keyboard Port
 PD0       PD0          CLOCK
 PD1       PD1          DATA
 GND       GND          GND
