@@ -40,17 +40,14 @@ struct hostent *server;
 
 usb_dev_handle *usbhandle;
 static usb_dev_handle *find_device(unsigned short, unsigned short);
-static usb_dev_handle *find_device_retry(unsigned short, unsigned short);
 
 char name[] = "amiga";
 
 int init()
 {
     usb_init();
-    usbhandle = find_device_retry(VENDOR_ID, PRODUCT_ID);
-    if(usbhandle != NULL)
-        return 0;
-    return -1;
+    usbhandle = find_device(VENDOR_ID, PRODUCT_ID);
+    return 0;
 }
 
 static usb_dev_handle *find_device(unsigned short vid, unsigned short pid)
@@ -73,36 +70,31 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid)
                             usb_strerror());
                     continue;
                 }
-                fprintf(stderr, "Connected\n");
+                fprintf(stderr, "Connected to USB device\n");
             }
         }
         if (handle)
             break;
     }
+    if (!handle)
+        fprintf(stderr, "Warning: Could not find USB device with vid=0x%x pid=0x%x\n", vid, pid);
     return handle;
-}
-
-usb_dev_handle *find_device_retry(unsigned short vid, unsigned short pid)
-{
-    if (usbhandle != NULL) {
-        usb_close(usbhandle);
-        usbhandle = NULL;
-    }
-    while ((usbhandle = find_device(vid, pid)) == NULL) {
-        fprintf(stderr,
-                "Could not find USB device with vid=0x%x pid=0x%x, retrying in 2 seconds\n",
-                vid, pid);
-        usleep(2 * 1000 * 1000);
-    }
-    return usbhandle;
 }
 
 int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
 {
+    if (usbhandle == NULL) {
+        usbhandle = find_device(VENDOR_ID, PRODUCT_ID);
+        if (usbhandle == NULL) {
+            return -1;
+        }
+
+    }
     int result = usb_control_msg(usbhandle, 0x40, bRequest, wValue, wIndex, 0, 0, 500);
     if (result < 0) {
-        fprintf(stderr, "Problem communicating with USB device, reconnecting\n");
-        usbhandle = find_device_retry(VENDOR_ID, PRODUCT_ID);
+        fprintf(stderr, "Warning: Problem communicating with USB device, closing handle\n");
+        usb_close(usbhandle);
+        usbhandle = NULL;
     }
     return result;
 }
@@ -136,12 +128,12 @@ uSynergyBool s_connect(uSynergyCookie cookie)
           (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(24800);
 
+    printf("Connecting to synergy server\n");
+
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connect failed");
         USYNERGY_FALSE;
     }
-
-    printf("connect\n");
 
     return USYNERGY_TRUE;
 }
