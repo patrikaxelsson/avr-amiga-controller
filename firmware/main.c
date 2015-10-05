@@ -57,21 +57,26 @@
     #define MOUSEBTN_OFFSET 4
 #endif
 
+#define PULLUP_PINS(port, ddr, pinMask) ddr &= ~(pinMask); port |= pinMask;
+#define SINK_PINS(port, ddr, pinMask) port &= ~(pinMask); ddr |= pinMask;
+
 volatile uint8_t got_sync;
 
 inline static void kclock(void) {
     _delay_us(20);
-    KEYB_PORT &= ~_BV(KEYB_CLK);
+    SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
     _delay_us(20);
-    KEYB_PORT |= _BV(KEYB_CLK);
+    PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
     _delay_us(20);
 }
 
 inline static void kdat(uint8_t b) {
-    if(b)
-        KEYB_PORT &= ~_BV(KEYB_DATA);
-    else
-        KEYB_PORT |= _BV(KEYB_DATA);
+    if(b) {
+        SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
+    }
+    else {
+        PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
+    }
     kclock();
 }
 
@@ -84,8 +89,6 @@ ISR(INT1_vect)
 
 uint8_t sync(void) {
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
-    KEYB_PORT &= ~_BV(KEYB_DATA);
-    KEYB_DDR &= ~_BV(KEYB_DATA);
     _delay_us(20);
     EIFR = _BV(KEYB_INT); // clear INT1 interrupt
     got_sync = 0;
@@ -96,17 +99,18 @@ uint8_t sync(void) {
     while(1)
     {
         EIMSK &= ~_BV(KEYB_INT); // disable INT1
-        KEYB_PORT &= ~_BV(KEYB_DATA);
-        KEYB_DDR |= _BV(KEYB_DATA);
+        SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA)); // Keep clocking out 1
         kclock();
-        KEYB_DDR &= ~_BV(KEYB_DATA);
-        KEYB_PORT |= _BV(KEYB_DATA);
         _delay_us(20);
         EIFR = _BV(KEYB_INT);
         got_sync = 0;
         EIMSK |= _BV(KEYB_INT); // enable INT1
         _delay_us(120);
-        if(got_sync) return false;
+        if(got_sync)
+        {
+            PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
+            return false;
+        }
     }
 }
 
@@ -137,8 +141,6 @@ void mouse(void)
 void keyboard(uint8_t k)
 {
     if(k == 0xff) return;
-    KEYB_PORT |= _BV(KEYB_DATA);
-    KEYB_DDR |= _BV(KEYB_DATA);
     kdat((k>>6)&1);
     kdat((k>>5)&1);
     kdat((k>>4)&1);
@@ -147,15 +149,16 @@ void keyboard(uint8_t k)
     kdat((k>>1)&1);
     kdat((k>>0)&1);
     kdat((k>>7)&1);
+    PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
     if(sync()) LEDs_ToggleLEDs(LEDS_LED2);
     else LEDs_ToggleLEDs(LEDS_LED1);
 }
 
 void reset(void)
 {
-    KEYB_PORT &= ~_BV(KEYB_CLK);
+    SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
     _delay_ms(500);
-    KEYB_PORT |= _BV(KEYB_CLK);
+    PULLUP_PINS(KEYB_PORT,KEYB_DDR, _BV(KEYB_CLK));
 }
 
 void SetupHardware(void)
@@ -174,8 +177,7 @@ void SetupHardware(void)
     MOUSEMV_DDR &= ~MOUSEMV_MASK;
     MOUSEMV_PORT &= ~MOUSEMV_MASK;
 
-    KEYB_DDR  |= _BV(KEYB_CLK);
-    KEYB_PORT |= _BV(KEYB_CLK);
+    PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK) | _BV(KEYB_DATA));
 
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
     EIFR = _BV(KEYB_INT); // clear INT1 interrupt
