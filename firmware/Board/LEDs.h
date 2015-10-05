@@ -95,14 +95,14 @@
 
 			static inline void LEDs_TurnOnLEDs(const uint8_t LEDMask)
 			{
-				PORTB |= (LEDMask & LEDS_PORTB_LEDS);
-				PORTD |= (LEDMask & LEDS_PORTD_LEDS);
+				PORTB &= ~(LEDMask & LEDS_PORTB_LEDS);
+				PORTD &= ~(LEDMask & LEDS_PORTD_LEDS);
 			}
 
 			static inline void LEDs_TurnOffLEDs(const uint8_t LEDMask)
 			{
-				PORTB &= ~(LEDMask & LEDS_PORTB_LEDS);
-				PORTD &= ~(LEDMask & LEDS_PORTD_LEDS);
+				PORTB |= (LEDMask & LEDS_PORTB_LEDS);
+				PORTD |= (LEDMask & LEDS_PORTD_LEDS);
 			}
 
 			static inline void LEDs_SetAllLEDs(const uint8_t LEDMask)

@@ -167,6 +167,8 @@ void SetupHardware(void)
     /* Disable clock division */
     clock_prescale_set(clock_div_1);
 
+    LEDs_Init();
+
     MOUSEBTN_DDR &= ~MOUSEBTN_MASK;
     MOUSEBTN_PORT &= ~MOUSEBTN_MASK;
     MOUSEMV_DDR &= ~MOUSEMV_MASK;
@@ -184,7 +186,6 @@ void SetupHardware(void)
     keyboard(0xfe);
     cli();
 
-    LEDs_Init();
     USB_Init();
 
     /* Hardware Initialization */
