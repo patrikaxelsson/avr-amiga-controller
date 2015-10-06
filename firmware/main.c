@@ -23,6 +23,7 @@
 
 #if BOARD == BOARD_MINIMUS
     #define KEYB_PORT PORTD
+    #define KEYB_PIN PIND
     #define KEYB_DDR DDRD
     #define KEYB_CLK 0
     #define KEYB_DATA 1
@@ -41,6 +42,7 @@
 // Pro Micro, suppport files in Board directory
 #elif BOARD == BOARD_USER
     #define KEYB_PORT PORTD
+    #define KEYB_PIN PIND
     #define KEYB_DDR DDRD
     #define KEYB_CLK 0
     #define KEYB_DATA 1
@@ -87,33 +89,40 @@ ISR(INT1_vect)
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
 } 
 
-uint8_t sync(void) {
+uint8_t kwaithandshake(void) {
+    uint16_t i;
+
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
-    _delay_us(20);
     EIFR = _BV(KEYB_INT); // clear INT1 interrupt
     got_sync = 0;
     EIMSK |= _BV(KEYB_INT); // enable INT1
-    _delay_us(170);
-    if(got_sync) return true;
+    // Wait max ~143ms (47666 * 3us) for handshake
+    for(i = 0; i < 47666; i++)
+    {
+        if(got_sync) return true;
+        _delay_us(3);
+    }
 
+    return false;
+}
+
+void kregainsync(void)
+{
     while(1)
     {
-        EIMSK &= ~_BV(KEYB_INT); // disable INT1
-        SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA)); // Keep clocking out 1
-        kclock();
-        _delay_us(20);
-        EIFR = _BV(KEYB_INT);
-        got_sync = 0;
-        EIMSK |= _BV(KEYB_INT); // enable INT1
-        _delay_us(120);
-        if(got_sync)
-        {
+        kdat(1); // Keep clocking out 1
+        if(kwaithandshake()) {
             PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
-            return false;
+            return;
         }
     }
 }
 
+void kwaitbusfree(void)
+{
+    const uint8_t floatMask = _BV(KEYB_CLK) | _BV(KEYB_DATA);
+    while((KEYB_PIN & floatMask) != floatMask);
+}
 
 volatile uint8_t xc;
 volatile uint8_t yc;
@@ -141,6 +150,9 @@ void mouse(void)
 void keyboard(uint8_t k)
 {
     if(k == 0xff) return;
+
+    kwaitbusfree();
+
     kdat((k>>6)&1);
     kdat((k>>5)&1);
     kdat((k>>4)&1);
@@ -150,8 +162,13 @@ void keyboard(uint8_t k)
     kdat((k>>0)&1);
     kdat((k>>7)&1);
     PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
-    if(sync()) LEDs_ToggleLEDs(LEDS_LED2);
-    else LEDs_ToggleLEDs(LEDS_LED1);
+    if(kwaithandshake()) {
+        LEDs_ToggleLEDs(LEDS_LED2);
+    }
+    else {
+        LEDs_ToggleLEDs(LEDS_LED1);
+        kregainsync();
+    }
 }
 
 void reset(void)
@@ -183,10 +200,10 @@ void SetupHardware(void)
     EIFR = _BV(KEYB_INT); // clear INT1 interrupt
 
     sei();
-    sync();
+    kwaitbusfree();
+    kregainsync();
     keyboard(0xfd);
     keyboard(0xfe);
-    cli();
 
     USB_Init();
 
