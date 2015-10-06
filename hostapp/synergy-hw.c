@@ -100,11 +100,12 @@ int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
 }
 
 int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
+    static int count = 0;
     const uint8_t amigaKeyUpMask = 0x80;
     int result;
     
     result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
-    printf("send_amiga_key, amigaKey=%2x keyUp=%d - %d\n", amigaKey, keyUp, result);
+    printf("send_amiga_key, amigaKey=%2x keyUp=%d count=%d - %d\n", amigaKey, keyUp, count++, result);
 }
 
 uSynergyBool s_connect(uSynergyCookie cookie)
@@ -256,11 +257,17 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
             default:
                 if (key < sizeof(keycodes)) {
                     uint8_t amigaKey = keycodes[key];
-                    if (amigaKey != 0xff)
+                    if (amigaKey != 0xff) {
                         usb_send_amiga_key(amigaKey, !down);
+                    }
+                    else {
+                        printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                    }
+                }
+                else {
+                    printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
                 }
         }
-        printf("keyboard, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
     }
 }
 
