@@ -9,7 +9,6 @@
 
 #define VENDOR_STRING L"Vendor"
 #define PRODUCT_STRING L"Product"
-#define SERIAL_STRING L"Serial"
 
 typedef struct {
     USB_Descriptor_Configuration_Header_t Config;

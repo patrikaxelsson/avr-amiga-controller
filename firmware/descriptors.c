@@ -16,7 +16,7 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {
 
     .ManufacturerStrIndex = 0x01,
     .ProductStrIndex = 0x02,
-    .SerialNumStrIndex = 0x03,
+    .SerialNumStrIndex = USE_INTERNAL_SERIAL, // Use AVR internal unique serial number
 
     .NumberOfConfigurations = FIXED_NUM_CONFIGURATIONS
 };
@@ -65,11 +65,6 @@ const USB_Descriptor_String_t PROGMEM ProductString = {
     .UnicodeString = PRODUCT_STRING
 };
 
-const USB_Descriptor_String_t PROGMEM SerialString = {
-    .Header = {.Size = USB_STRING_LEN(6),.Type = DTYPE_String},
-    .UnicodeString = SERIAL_STRING
-};
-
 uint16_t
 CALLBACK_USB_GetDescriptor(const uint16_t wValue,
                            const uint8_t wIndex,
@@ -102,10 +97,6 @@ CALLBACK_USB_GetDescriptor(const uint16_t wValue,
         case 0x02:
             Address = &ProductString;
             Size = pgm_read_byte(&ProductString.Header.Size);
-            break;
-        case 0x03:
-            Address = &SerialString;
-            Size = pgm_read_byte(&SerialString.Header.Size);
             break;
         }
         break;

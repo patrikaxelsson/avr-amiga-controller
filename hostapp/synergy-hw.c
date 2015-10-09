@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <getopt.h>
 
 #include <usb.h>
 
@@ -39,22 +40,23 @@ struct sockaddr_in serv_addr;
 struct hostent *server;
 
 usb_dev_handle *usbhandle;
-static usb_dev_handle *find_device(unsigned short, unsigned short);
+static usb_dev_handle *find_device(unsigned short, unsigned short, char *);
 
-char name[] = "amiga";
+char *usbSerial = "";
 
 int init()
 {
     usb_init();
-    usbhandle = find_device(VENDOR_ID, PRODUCT_ID);
+    usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerial);
     return 0;
 }
 
-static usb_dev_handle *find_device(unsigned short vid, unsigned short pid)
+static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char *serial)
 {
     struct usb_bus *bus;
     struct usb_device *dev;
     usb_dev_handle *handle = 0;
+    char tmpSerial[64];
 
     usb_find_busses();
     usb_find_devices();
@@ -70,21 +72,34 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid)
                             usb_strerror());
                     continue;
                 }
-                fprintf(stderr, "Connected to USB device\n");
+                
+                tmpSerial[0] = '\0';
+                if (dev->descriptor.iSerialNumber > 0) {
+                    usb_get_string_simple(handle, dev->descriptor.iSerialNumber, tmpSerial, sizeof(tmpSerial));
+                }
+
+                if (strlen(serial) > 0 &&
+                    strcmp(serial, tmpSerial) != 0) {
+                    fprintf(stderr, "Found USB device with correct vid and pid but serial '%s' doesn't match, skipping\n", tmpSerial);
+                    usb_close(handle);
+                    handle = 0;
+                }
+                else
+                    fprintf(stderr, "Connected to USB device with serial '%s'\n", tmpSerial);
             }
         }
         if (handle)
             break;
     }
     if (!handle)
-        fprintf(stderr, "Warning: Could not find USB device with vid=0x%x pid=0x%x\n", vid, pid);
+        fprintf(stderr, "Warning: Could not find USB device with vid=0x%x pid=0x%x serial='%s'\n", vid, pid, serial);
     return handle;
 }
 
 int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
 {
     if (usbhandle == NULL) {
-        usbhandle = find_device(VENDOR_ID, PRODUCT_ID);
+        usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerial);
         if (usbhandle == NULL) {
             return -1;
         }
@@ -285,9 +300,27 @@ void s_clipboard(uSynergyCookie cookie, enum uSynergyClipboardFormat format,
     printf("clipboard, size=%d\n", size);
 }
 
-int main(char *argv, int argc)
+int main(int argc, char **argv)
 {
     uSynergyContext context;
+    int option = 0;
+    char *synergyClientName = "amiga";
+
+    while ((option = getopt(argc, argv,"u:n:h")) != -1) {
+        switch (option) {
+            case 'u':
+                synergyClientName = optarg; 
+                break;
+            case 'n':
+                usbSerial = optarg;
+                break;
+            case 'h':
+            default:
+                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerial]\n", argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+    
     uSynergyInit(&context);
 
     context.m_connectFunc = &s_connect;
@@ -303,7 +336,7 @@ int main(char *argv, int argc)
     context.m_joystickCallback = &s_joystick;
     context.m_clipboardCallback = &s_clipboard;
 
-    context.m_clientName = name;
+    context.m_clientName = synergyClientName;
     context.m_clientWidth = 1000;
     context.m_clientHeight = 1000;
 
