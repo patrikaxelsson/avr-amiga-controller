@@ -301,6 +301,7 @@ int main(int argc, char **argv)
 {
     uSynergyContext context;
     int option = 0;
+    int keyCodesFromStdin = 0;
     char *synergyClientName = "amiga";
 
     while ((option = getopt(argc, argv,"u:n:d:h")) != -1) {
@@ -320,9 +321,22 @@ int main(int argc, char **argv)
                 exit(EXIT_FAILURE);
         }
     }
+    if (optind < argc && strcmp(argv[optind], "-") == 0) {
+        keyCodesFromStdin = 1;
+    }
     
-    uSynergyInit(&context);
+    init();
 
+    if (keyCodesFromStdin) {
+        int c;
+        fprintf(stderr, "Will send stdin as raw amiga keycodes to the avr\n");
+        while(c = getchar()) {
+            if (c < 0 || c == EOF) exit(0);
+            usb_send_amiga_key(c, c & 0x80);
+        }
+    }
+
+    uSynergyInit(&context);
     context.m_connectFunc = &s_connect;
     context.m_sendFunc = &s_send;
     context.m_receiveFunc = &s_receive;
@@ -335,12 +349,9 @@ int main(int argc, char **argv)
     context.m_keyboardCallback = &s_keyboard;
     context.m_joystickCallback = &s_joystick;
     context.m_clipboardCallback = &s_clipboard;
-
     context.m_clientName = synergyClientName;
     context.m_clientWidth = 1000;
     context.m_clientHeight = 1000;
-
-    init();
 
     for (;;) {
         uSynergyUpdate(&context);
