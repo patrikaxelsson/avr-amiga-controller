@@ -42,13 +42,13 @@ struct hostent *server;
 usb_dev_handle *usbhandle;
 static usb_dev_handle *find_device(unsigned short, unsigned short, char *);
 
-char *usbSerial = "";
+char *usbSerialNum = "";
 int debugLevel = 0;
 
 int init()
 {
     usb_init();
-    usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerial);
+    usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerialNum);
     return 0;
 }
 
@@ -57,7 +57,7 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char 
     struct usb_bus *bus;
     struct usb_device *dev;
     usb_dev_handle *handle = 0;
-    char tmpSerial[64];
+    char tmpSerialNum[64];
 
     usb_find_busses();
     usb_find_devices();
@@ -72,19 +72,19 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char 
                     continue;
                 }
                 
-                tmpSerial[0] = '\0';
+                tmpSerialNum[0] = '\0';
                 if (dev->descriptor.iSerialNumber > 0) {
-                    usb_get_string_simple(handle, dev->descriptor.iSerialNumber, tmpSerial, sizeof(tmpSerial));
+                    usb_get_string_simple(handle, dev->descriptor.iSerialNumber, tmpSerialNum, sizeof(tmpSerialNum));
                 }
 
                 if (strlen(serial) > 0 &&
-                    strcmp(serial, tmpSerial) != 0) {
-                    fprintf(stderr, "Found USB device with correct vid and pid but serial '%s' doesn't match, skipping\n", tmpSerial);
+                    strcmp(serial, tmpSerialNum) != 0) {
+                    fprintf(stderr, "Found USB device with correct vid and pid but serial '%s' doesn't match, skipping\n", tmpSerialNum);
                     usb_close(handle);
                     handle = 0;
                 }
                 else
-                    fprintf(stderr, "Connected to USB device with serial '%s'\n", tmpSerial);
+                    fprintf(stderr, "Connected to USB device with serial '%s'\n", tmpSerialNum);
             }
         }
         if (handle)
@@ -98,7 +98,7 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char 
 int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
 {
     if (usbhandle == NULL) {
-        usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerial);
+        usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerialNum);
         if (usbhandle == NULL) {
             return -1;
         }
@@ -309,14 +309,14 @@ int main(int argc, char **argv)
                 synergyClientName = optarg; 
                 break;
             case 'n':
-                usbSerial = optarg;
+                usbSerialNum = optarg;
                 break;
             case 'd':
                 debugLevel = 1;
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerial] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerialNum] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
