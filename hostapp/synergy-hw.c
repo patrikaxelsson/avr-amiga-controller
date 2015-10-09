@@ -43,6 +43,7 @@ usb_dev_handle *usbhandle;
 static usb_dev_handle *find_device(unsigned short, unsigned short, char *);
 
 char *usbSerial = "";
+int debugLevel = 0;
 
 int init()
 {
@@ -67,9 +68,7 @@ static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char 
 
                 handle = usb_open(dev); /* we need to open the device in order to query strings */
                 if (!handle) {
-                    fprintf(stderr,
-                            "Warning: cannot open USB device: %s\n",
-                            usb_strerror());
+                    fprintf(stderr, "Warning: cannot open USB device: %s\n", usb_strerror());
                     continue;
                 }
                 
@@ -120,7 +119,7 @@ int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
     int result;
     
     result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
-    printf("send_amiga_key, amigaKey=%2x keyUp=%d count=%d - %d\n", amigaKey, keyUp, count++, result);
+    if (debugLevel) printf("send_amiga_key, amigaKey=%2x keyUp=%d count=%d - %d\n", amigaKey, keyUp, count++, result);
 }
 
 uSynergyBool s_connect(uSynergyCookie cookie)
@@ -144,13 +143,11 @@ uSynergyBool s_connect(uSynergyCookie cookie)
           (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(24800);
 
-    printf("Connecting to synergy server\n");
-
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Connect failed");
+        perror("Connection to synergy server failed");
         USYNERGY_FALSE;
     }
-
+    
     return USYNERGY_TRUE;
 }
 
@@ -198,7 +195,7 @@ void s_trace(uSynergyCookie cookie, const char *text)
 
 void s_screenActive(uSynergyCookie cookie, uSynergyBool active)
 {
-    printf("screenActive, active=%d\n", active);
+    if (debugLevel) printf("screenActive, active=%d\n", active);
     
     // Hack for releasing any modifier keys used when switching from Amiga to PC
     if (active == 0) {
@@ -220,7 +217,7 @@ void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
 
     if (mstate != old_mstate) {
         result = usb_request(REQ_MOUSE_BTN, mstate, 0);
-        printf("mouse, button=%d,%d,%d - %d\n", buttonLeft,
+        if (debugLevel) printf("mouse, button=%d,%d,%d - %d\n", buttonLeft,
                buttonMiddle, buttonRight, result);
         old_mstate = mstate;
     }
@@ -230,7 +227,7 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
 {
     int result;
     result = usb_request(REQ_MOUSE_REL, x, y);
-    printf("mouse, rel=%d, %d - %d\n", x, y, result);
+    if (debugLevel) printf("mouse, rel=%d, %d - %d\n", x, y, result);
 }
 
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
@@ -276,11 +273,11 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                         usb_send_amiga_key(amigaKey, !down);
                     }
                     else {
-                        printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                        if (debugLevel) printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
                     }
                 }
                 else {
-                    printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                    if (debugLevel) printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
                 }
         }
     }
@@ -290,14 +287,14 @@ void s_joystick(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons,
                 int8_t leftStickX, int8_t leftStickY, int8_t rightStickX,
                 int8_t rightStickY)
 {
-    printf("joystick, left=%d,%d right=%d,%d\n", leftStickX, leftStickY,
+    if (debugLevel) printf("joystick, left=%d,%d right=%d,%d\n", leftStickX, leftStickY,
            rightStickX, rightStickY);
 }
 
 void s_clipboard(uSynergyCookie cookie, enum uSynergyClipboardFormat format,
                  const uint8_t * data, uint32_t size)
 {
-    printf("clipboard, size=%d\n", size);
+    if (debugLevel) printf("clipboard, size=%d\n", size);
 }
 
 int main(int argc, char **argv)
@@ -306,7 +303,7 @@ int main(int argc, char **argv)
     int option = 0;
     char *synergyClientName = "amiga";
 
-    while ((option = getopt(argc, argv,"u:n:h")) != -1) {
+    while ((option = getopt(argc, argv,"u:n:d:h")) != -1) {
         switch (option) {
             case 'u':
                 synergyClientName = optarg; 
@@ -314,9 +311,12 @@ int main(int argc, char **argv)
             case 'n':
                 usbSerial = optarg;
                 break;
+            case 'd':
+                debugLevel = 1;
+                break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerial]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerial] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
