@@ -279,7 +279,7 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                         // If caps lock is pressed down and modifiers has not caps lock set, then
                         // send caps down to amiga, else send caps up
                         uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
-                        usb_send_amiga_key(amigaLeftShift, capsKeyUp);
+                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
                     }
                     didSpecialStuff = 1;
                     break;
@@ -311,8 +311,8 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                     if (down) {
                         // If caps lock is pressed down and modifiers has not caps lock set, then
                         // send caps down to amiga, else send caps up
-                        uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
-                        usb_send_amiga_key(amigaLeftShift, capsKeyUp);
+                        uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 0 : 1;
+                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
                     }
                     didSpecialStuff = 1;
                     break;
