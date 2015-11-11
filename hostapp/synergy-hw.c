@@ -325,7 +325,9 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
                 uSynergyBool repeat)
 {
-    printf("keycode: %4x modifier: %04x down: %x\n", key, modifiers, down);
+    if(debugLevel > 1)
+        printf("keyboard - incoming, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
+
     if (!repeat) {
         if(!doSpecialKeyActions(key, modifiers, down)) {
             if (key < 0xA0) {
@@ -334,11 +336,11 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                     usb_send_amiga_key(amigaKey, !down);
                 }
                 else {
-                    if (debugLevel) printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                    if (debugLevel) printf("keyboard - ignored, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
                 }
             }
             else {
-                if (debugLevel) printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                if (debugLevel) printf("keyboard - unmapped, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
             }
         }
     }
@@ -375,19 +377,17 @@ int main(int argc, char **argv)
                 if(!strcmp(optarg, "linux")) {
                     keycodes = linux_keycodes;
                     serverType = Linux;
-                    printf("Server type: linux\n");
                 }
                 else if(!strcmp(optarg, "mac")) {
                     keycodes = mac_keycodes;
                     serverType = Mac;
-                    printf("Server type: mac\n");
                 }
                 break;
             case 's':
                 usbSerialNum = optarg;
                 break;
             case 'd':
-                debugLevel = 1;
+                debugLevel = atoi(optarg);
                 break;
             case 'h':
             default:
@@ -398,6 +398,8 @@ int main(int argc, char **argv)
     if (optind < argc && strcmp(argv[optind], "-") == 0) {
         keyCodesFromStdin = 1;
     }
+
+    printf("Server type: %s\n", serverType == Linux ? "linux" : "mac");
 
     init();
 
