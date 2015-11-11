@@ -33,7 +33,16 @@
 #include <usb.h>
 
 #include "../common.h"
-#include "../keytable.h"
+#include "keytable.h"
+
+enum ServerType {
+    Linux,
+    Mac
+};
+
+enum ServerType serverType = Linux;
+
+uint8_t *keycodes = linux_keycodes;
 
 int sockfd, portno;
 struct sockaddr_in serv_addr;
@@ -120,6 +129,8 @@ int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
     
     result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
     if (debugLevel) printf("send_amiga_key, amigaKey=%2x keyUp=%d count=%d - %d\n", amigaKey, keyUp, count++, result);
+
+    return result;
 }
 
 uSynergyBool s_connect(uSynergyCookie cookie)
@@ -230,9 +241,7 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
     if (debugLevel) printf("mouse, rel=%d, %d - %d\n", x, y, result);
 }
 
-void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
-                uSynergyBool repeat)
-{
+int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
     const uint8_t amigaLeftShift = 0x60;
     const uint8_t amigaCapsLock = 0x62;
     const uint8_t amigaCursorDown = 0x4d;
@@ -240,48 +249,101 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
     const uint8_t amigaCursorLeft = 0x4f;
     const uint8_t amigaCursorRight = 0x4e;
 
+    int didSpecialStuff = 0;
+
+    switch(serverType) {
+        case Linux:
+            switch (key) {
+                case 0x75: // Page down
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorDown, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x70: // Page up
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorUp, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x6e: // Home
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x73: // End
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorRight, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x42: // Caps lock
+                    if (down) {
+                        // If caps lock is pressed down and modifiers has not caps lock set, then
+                        // send caps down to amiga, else send caps up
+                        uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
+                        usb_send_amiga_key(amigaLeftShift, capsKeyUp);
+                    }
+                    didSpecialStuff = 1;
+                    break;
+            }
+            break;
+        case Mac:
+            switch (key) {
+                case 0x7a: // Page down
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorDown, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x75: // Page up
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorUp, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x74: // Home
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x78: // End
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorRight, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x3a: // Caps lock
+                    if (down) {
+                        // If caps lock is pressed down and modifiers has not caps lock set, then
+                        // send caps down to amiga, else send caps up
+                        uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
+                        usb_send_amiga_key(amigaLeftShift, capsKeyUp);
+                    }
+                    didSpecialStuff = 1;
+                    break;
+            }
+            break;
+    }
+    return didSpecialStuff; 
+}
+
+void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
+                uSynergyBool repeat)
+{
+    printf("keycode: %4x modifier: %04x down: %x\n", key, modifiers, down);
     if (!repeat) {
-        switch (key) {
-            case 0x75: // Page down
-                usb_send_amiga_key(amigaLeftShift, !down);
-                usb_send_amiga_key(amigaCursorDown, !down);
-                break;
-            case 0x70: // Page up
-                usb_send_amiga_key(amigaLeftShift, !down);
-                usb_send_amiga_key(amigaCursorUp, !down);
-                break;
-            case 0x6e: // Home
-                usb_send_amiga_key(amigaLeftShift, !down);
-                usb_send_amiga_key(amigaCursorLeft, !down);
-                break;
-            case 0x73: // End
-                usb_send_amiga_key(amigaLeftShift, !down);
-                usb_send_amiga_key(amigaCursorRight, !down);
-                break;
-            case 0x42: // Caps lock
-                if (down) {
-                    // If caps lock is pressed down and modifiers has not caps lock set, then
-                    // send caps down to amiga, else send caps up
-                    uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
-                    usb_send_amiga_key(amigaLeftShift, capsKeyUp);
-                }
-                break;
-            default:
-                if (key < sizeof(keycodes)) {
-                    uint8_t amigaKey = keycodes[key];
-                    if (amigaKey != 0xff) {
-                        usb_send_amiga_key(amigaKey, !down);
-                    }
-                    else {
-                        if (debugLevel) printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
-                    }
+        if(!doSpecialKeyActions(key, modifiers, down)) {
+            if (key < 0xA0) {
+                uint8_t amigaKey = keycodes[key];
+                if (amigaKey != 0xff) {
+                    usb_send_amiga_key(amigaKey, !down);
                 }
                 else {
-                    if (debugLevel) printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+                    if (debugLevel) printf("keyboard - ignored, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
                 }
+            }
+            else {
+                if (debugLevel) printf("keyboard - unmapped, key=%2x down=%d modifiers=%4x\n", key, down, modifiers);
+            }
         }
     }
 }
+
 
 void s_joystick(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons,
                 int8_t leftStickX, int8_t leftStickY, int8_t rightStickX,
@@ -304,12 +366,24 @@ int main(int argc, char **argv)
     int keyCodesFromStdin = 0;
     char *synergyClientName = "amiga";
 
-    while ((option = getopt(argc, argv,"u:n:d:h")) != -1) {
+    while ((option = getopt(argc, argv,"n:s:t:d:h")) != -1) {
         switch (option) {
-            case 'u':
+            case 'n':
                 synergyClientName = optarg; 
                 break;
-            case 'n':
+            case 't':
+                if(!strcmp(optarg, "linux")) {
+                    keycodes = linux_keycodes;
+                    serverType = Linux;
+                    printf("Server type: linux\n");
+                }
+                else if(!strcmp(optarg, "mac")) {
+                    keycodes = mac_keycodes;
+                    serverType = Mac;
+                    printf("Server type: mac\n");
+                }
+                break;
+            case 's':
                 usbSerialNum = optarg;
                 break;
             case 'd':
@@ -317,20 +391,20 @@ int main(int argc, char **argv)
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-u synergyClientName] [-n usbSerialNum] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac][-s usbSerialNum] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
     if (optind < argc && strcmp(argv[optind], "-") == 0) {
         keyCodesFromStdin = 1;
     }
-    
+
     init();
 
     if (keyCodesFromStdin) {
         int c;
         fprintf(stderr, "Will send stdin as raw amiga keycodes to the avr\n");
-        while(c = getchar()) {
+        while((c = getchar())) {
             if (c < 0 || c == EOF) exit(0);
             usb_send_amiga_key(c, c & 0x80);
         }
