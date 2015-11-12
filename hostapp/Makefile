@@ -3,7 +3,7 @@ all: hostapp synergy-hw
 hostapp: hostapp.c
 	gcc -o hostapp hostapp.c -lusb
 
-synergy-hw: synergy-hw.c keytable.h uSynergy.c uSynergy.h
+synergy-hw: synergy-hw.c keytables.h uSynergy.c uSynergy.h
 	gcc -o synergy-hw synergy-hw.c uSynergy.c -lusb
 
 clean:

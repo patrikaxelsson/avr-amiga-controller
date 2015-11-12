@@ -219,9 +219,9 @@ uint8_t mac_keycodes[0xA0] = {
     0x45, // 36 escape
     0xff, // 37 
     0x66, // 38 left amiga
-    0x60, // 39 lshift
+    0x60, // 39 left shift
     0x62, // 3A caps lock
-    0xff, // 3B 
+    0x64, // 3B left alt
     0x63, // 3C ctrl
     0xff, // 3D 
     0xff, // 3E 

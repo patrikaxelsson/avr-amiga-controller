@@ -33,7 +33,7 @@
 #include <usb.h>
 
 #include "../common.h"
-#include "keytable.h"
+#include "keytables.h"
 
 enum ServerType {
     Linux,
