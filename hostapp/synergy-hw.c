@@ -159,9 +159,9 @@ uSynergyBool s_connect(uSynergyCookie cookie)
     serv_addr.sin_port = htons(24800);
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Connection to synergy server failed");
+        perror("Connecting to synergy server");
         // A primitive limit to not make it reconnect as fast as possible
-        usleep(5000000);
+        usleep(1000000);
         return USYNERGY_FALSE;
     }
     
