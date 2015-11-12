@@ -228,34 +228,34 @@ uint8_t mac_keycodes[0xA0] = {
     0xff, // 3F 
     0xff, // 40 
     0xff, // 41 
-    0xff, // 42 
+    0x3c, // 42 Numpad . 
     0xff, // 43 
-    0xff, // 44 
+    0x5d, // 44 Numpad *
     0xff, // 45 
-    0xff, // 46 
+    0x5e, // 46 Numpad + 
     0xff, // 47 
-    0xff, // 48 
+    0x5a, // 48 Numpad ( 
     0xff, // 49 
     0xff, // 4A 
     0xff, // 4B 
-    0xff, // 4C 
-    0xff, // 4D 
+    0x5c, // 4C Numpad /
+    0x43, // 4D Numpad Enter
     0xff, // 4E 
-    0xff, // 4F 
+    0x4a, // 4F Numpad - 
     0xff, // 50 
     0xff, // 51 
     0xff, // 52 
-    0xff, // 53 
-    0xff, // 54 
-    0xff, // 55 
-    0xff, // 56 
-    0xff, // 57 
-    0xff, // 58 
-    0xff, // 59 
-    0xff, // 5A 
+    0x0f, // 53 Numpad 0 
+    0x1d, // 54 Numpad 1 
+    0x1e, // 55 Numpad 2 
+    0x1f, // 56 Numpad 3
+    0x2d, // 57 Numpad 4
+    0x2e, // 58 Numpad 5
+    0x2f, // 59 Numpad 6
+    0x3d, // 5A Numpad 7 
     0xff, // 5B 
-    0xff, // 5C 
-    0xff, // 5D 
+    0x3e, // 5C Numpad 8 
+    0x3f, // 5D Numpad 9
     0xff, // 5E 
     0xff, // 5F 
     0xff, // 60 
@@ -266,15 +266,15 @@ uint8_t mac_keycodes[0xA0] = {
     0x57, // 65 F8 
     0x58, // 66 F9
     0xff, // 67
-    0xff, // 68
+    0x5F, // 68 F11 -> Help
     0xff, // 69 
     0xff, // 6A 
     0xff, // 6B 
     0xff, // 6C 
     0xff, // 6D 
     0x59, // 6E F10 
-    0xff, // 6F 
-    0xff, // 70 
+    0x67, // 6F Menu key -> Right Amiga (when a regular pc keyboard used on a mac (right of right windows key))
+    0x67, // 70 F12 -> Right Amiga (A solution until synergy hopefully can send both left/right super key)
     0xff, // 71 
     0xff, // 72 
     0xff, // 73 
