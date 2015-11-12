@@ -44,7 +44,7 @@ enum ServerType serverType = Linux;
 
 uint8_t *keycodes = linux_keycodes;
 
-int sockfd, portno;
+int sockfd = 0;
 struct sockaddr_in serv_addr;
 struct hostent *server;
 
@@ -135,6 +135,10 @@ int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
 
 uSynergyBool s_connect(uSynergyCookie cookie)
 {
+    // To be able to handle reconnects cleanly
+    if(sockfd) {
+        close(sockfd);
+    }
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -156,7 +160,9 @@ uSynergyBool s_connect(uSynergyCookie cookie)
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connection to synergy server failed");
-        USYNERGY_FALSE;
+        // A primitive limit to not make it reconnect as fast as possible
+        usleep(5000000);
+        return USYNERGY_FALSE;
     }
     
     return USYNERGY_TRUE;
