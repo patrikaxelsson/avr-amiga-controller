@@ -281,7 +281,7 @@ uint8_t windows_keycodes[] = {
     0x09, // 0A 9
     0x0a, // 0B 0
     0x0b, // 0C -
-    0x0c, // 0D =
+    0x0d, // 0D |
     0x41, // 0E backspace
     0x42, // 0F tab
     0x10, // 10 q
@@ -309,7 +309,7 @@ uint8_t windows_keycodes[] = {
     0x28, // 26 l
     0x29, // 27 :
     0x2a, // 28 "
-    0xff, // 29
+    0x00, // 29 `
     0x60, // 2A left shift
     0x2b, // 2B unknown key left of return
     0x31, // 2C z
@@ -354,7 +354,7 @@ uint8_t windows_keycodes[] = {
     0x3c, // 53 numpad .
     0xff, // 54
     0xff, // 55
-    0xff, // 56
+    0x30, // 56 unknown key right of left shift
     0x5f, // 57 F11 -> help
     0x67, // 58 F12 -> right amiga
     0xff, // 59
@@ -363,7 +363,7 @@ uint8_t windows_keycodes[] = {
     0xff, // 5C
     0xff, // 5D
     0xff, // 5E
-    0x30, // 5F Unknown key right of left shift
+    0xff, // 5F
     0xff, // 60
     0xff, // 61
     0xff, // 62
