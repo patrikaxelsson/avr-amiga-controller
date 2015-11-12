@@ -242,7 +242,7 @@ uint8_t mac_keycodes[] = {
     0x57, // 65 F8 
     0x58, // 66 F9
     0xff, // 67
-    0x5F, // 68 F11 -> Help
+    0x5f, // 68 F11 -> Help
     0xff, // 69 
     0xff, // 6A 
     0xff, // 6B 
@@ -253,7 +253,7 @@ uint8_t mac_keycodes[] = {
     0x67, // 70 F12 -> Right Amiga (A solution until synergy hopefully can send both left/right super key)
     0xff, // 71 
     0xff, // 72 
-    0xff, // 73 
+    0x5f, // 73 insert/help -> help 
     0xff, // 74 
     0xff, // 75 
     0x46, // 76 delete
