@@ -37,7 +37,8 @@
 
 enum ServerType {
     Linux,
-    Mac
+    Mac,
+    Windows
 };
 
 enum ServerType serverType = Linux;
@@ -324,8 +325,49 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                     break;
             }
             break;
+        case Windows:
+            switch (key) {
+                case 0x151: // Page down
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorDown, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x149: // Page up
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorUp, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x147: // Home
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x14f: // End
+                    usb_send_amiga_key(amigaLeftShift, !down);
+                    usb_send_amiga_key(amigaCursorRight, !down);
+                    didSpecialStuff = 1;
+                    break;
+                case 0x3a: // Caps lock
+                    if (down) {
+                        // If caps lock is pressed down and modifiers has not caps lock set, then
+                        // send caps down to amiga, else send caps up
+                        uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 0 : 1;
+                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
+                    }
+                    didSpecialStuff = 1;
+                    break;
+            }
+            break;
     }
     return didSpecialStuff; 
+}
+
+int getKeycodesLength(enum ServerType serverType) {
+    switch(serverType) {
+        case Linux: return sizeof(linux_keycodes);
+        case Mac: return sizeof(mac_keycodes);
+        case Windows: return sizeof(windows_keycodes);
+    }
 }
 
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
@@ -336,7 +378,7 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
 
     if (!repeat) {
         if(!doSpecialKeyActions(key, modifiers, down)) {
-            if (key < 0xA0) {
+            if (key < getKeycodesLength(serverType)) {
                 uint8_t amigaKey = keycodes[key];
                 if (amigaKey != 0xff) {
                     usb_send_amiga_key(amigaKey, !down);
@@ -388,6 +430,10 @@ int main(int argc, char **argv)
                     keycodes = mac_keycodes;
                     serverType = Mac;
                 }
+                else if(!strcmp(optarg, "windows")) {
+                    keycodes = windows_keycodes;
+                    serverType = Windows;
+                }
                 break;
             case 's':
                 usbSerialNum = optarg;
@@ -397,7 +443,7 @@ int main(int argc, char **argv)
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac][-s usbSerialNum] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows][-s usbSerialNum] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
@@ -405,7 +451,7 @@ int main(int argc, char **argv)
         keyCodesFromStdin = 1;
     }
 
-    printf("Server type: %s\n", serverType == Linux ? "linux" : "mac");
+    printf("Server type: %s\n", serverType == Linux ? "linux" : serverType == Mac ? "mac" : "windows");
 
     init();
 
