@@ -36,7 +36,7 @@ uint8_t linux_keycodes[] = {
     0x1a, // 22 [
     0x1b, // 23 ]
     0x44, // 24 return
-    0x63, // 25 lctrl !!!!!!!!!!
+    0x63, // 25 ctrl
     0x20, // 26 a
     0x21, // 27 s
     0x22, // 28 d
@@ -65,7 +65,7 @@ uint8_t linux_keycodes[] = {
     0x5d, // 3F 
     0x64, // 40 lalt
     0x40, // 41 space
-    0x62, // 42 capslock
+    0x62, // 42 caps lock
     0x50, // 43 F1
     0x51, // 44 F2
     0x52, // 45 F3
@@ -76,7 +76,7 @@ uint8_t linux_keycodes[] = {
     0x57, // 4A F8
     0x58, // 4B F9
     0x59, // 4C F10
-    0xff, // 4D 
+    0x5a, // 4D numlock -> numpad ( 
     0xff, // 4E 
     0x3d, // 4F numpad 7
     0x3e, // 50 numpad 8
@@ -94,7 +94,7 @@ uint8_t linux_keycodes[] = {
     0xff, // 5C 
     0xff, // 5D 
     0x30, // 5E |
-    0xff, // 5F 
+    0xff, // 5F
     0xff, // 60 
     0xff, // 61 
     0xff, // 62 
@@ -104,7 +104,7 @@ uint8_t linux_keycodes[] = {
     0xff, // 66 
     0xff, // 67 
     0x43, // 68 numpad enter
-    0xff, // 69 
+    0x63, // 69 right ctrl -> amiga ctrl 
     0x5c, // 6A numpad /
     0xff, // 6B 
     0x65, // 6C altgr
@@ -117,8 +117,8 @@ uint8_t linux_keycodes[] = {
     0xff, // 73 
     0x4d, // 74 curs down
     0xff, // 75 
-    0x5f, // 76 help
-    0x46, // 77 del
+    0x5f, // 76 insert -> help
+    0x46, // 77 delete
     0xff, // 78 
     0xff, // 79 
     0xff, // 7A 
@@ -132,8 +132,9 @@ uint8_t linux_keycodes[] = {
     0xff, // 82 
     0xff, // 83 
     0xff, // 84 
-    0x66, // 85 lamiga
-    0x67, // 86 rmiga
+    0x66, // 85 left amiga
+    0x67, // 86 right amiga
+    0x67, // 87 windows menu key -> right amiga
 };
 
 uint8_t mac_keycodes[] = {
@@ -162,7 +163,7 @@ uint8_t mac_keycodes[] = {
     0x04, // 16 4
     0x06, // 17 6
     0x05, // 18 5
-    0x0d, // 19 |
+    0x0c, // 19 =
     0x09, // 1A 9
     0x07, // 1B 7
     0x0b, // 1C -
@@ -205,32 +206,32 @@ uint8_t mac_keycodes[] = {
     0xff, // 41 
     0x3c, // 42 Numpad . 
     0xff, // 43 
-    0x5d, // 44 Numpad *
+    0x5d, // 44 numpad *
     0xff, // 45 
-    0x5e, // 46 Numpad + 
+    0x5e, // 46 numpad + 
     0xff, // 47 
-    0x5a, // 48 Numpad ( 
+    0x5a, // 48 numlock -> numpad ( 
     0xff, // 49 
     0xff, // 4A 
     0xff, // 4B 
-    0x5c, // 4C Numpad /
-    0x43, // 4D Numpad Enter
+    0x5c, // 4C numpad /
+    0x43, // 4D numpad enter
     0xff, // 4E 
-    0x4a, // 4F Numpad - 
+    0x4a, // 4F numpad - 
     0xff, // 50 
     0xff, // 51 
     0xff, // 52 
-    0x0f, // 53 Numpad 0 
-    0x1d, // 54 Numpad 1 
-    0x1e, // 55 Numpad 2 
-    0x1f, // 56 Numpad 3
-    0x2d, // 57 Numpad 4
-    0x2e, // 58 Numpad 5
-    0x2f, // 59 Numpad 6
-    0x3d, // 5A Numpad 7 
+    0x0f, // 53 numpad 0 
+    0x1d, // 54 numpad 1 
+    0x1e, // 55 numpad 2 
+    0x1f, // 56 numpad 3
+    0x2d, // 57 numpad 4
+    0x2e, // 58 numpad 5
+    0x2f, // 59 numpad 6
+    0x3d, // 5A numpad 7 
     0xff, // 5B 
-    0x3e, // 5C Numpad 8 
-    0x3f, // 5D Numpad 9
+    0x3e, // 5C numpad 8 
+    0x3f, // 5D numpad 9
     0xff, // 5E 
     0xff, // 5F 
     0xff, // 60 
@@ -281,7 +282,7 @@ uint8_t windows_keycodes[] = {
     0x09, // 0A 9
     0x0a, // 0B 0
     0x0b, // 0C -
-    0x0d, // 0D |
+    0x0c, // 0D =
     0x41, // 0E backspace
     0x42, // 0F tab
     0x10, // 10 q
@@ -355,7 +356,7 @@ uint8_t windows_keycodes[] = {
     0xff, // 54
     0xff, // 55
     0x30, // 56 unknown key right of left shift
-    0x5f, // 57 F11 -> help
+    0xff, // 57
     0x67, // 58 F12 -> right amiga
     0xff, // 59
     0xff, // 5A
@@ -593,7 +594,7 @@ uint8_t windows_keycodes[] = {
     0xff, // 142
     0xff, // 143
     0xff, // 144
-    0x5a, // 145 numpad (
+    0x5a, // 145 numlock -> numpad (
     0xff, // 146
     0xff, // 147
     0x4c, // 148 curs up
@@ -606,7 +607,7 @@ uint8_t windows_keycodes[] = {
     0xff, // 14F
     0x4d, // 150 curs down
     0xff, // 151
-    0xff, // 152
+    0x5f, // 152 insert -> help
     0x46, // 153 delete
     0xff, // 154
     0xff, // 155
