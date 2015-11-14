@@ -96,6 +96,32 @@ static libusb_device_handle *find_device(const unsigned short vid, const unsigne
     return handle;
 }
 
+void listUsbDeviceMatches(const unsigned short vid, const unsigned short pid)
+{
+    libusb_device **devices;
+    ssize_t numDevices = libusb_get_device_list(NULL, &devices);
+    ssize_t i = 0;
+
+    for (i = 0; i < numDevices; i++) {
+        struct libusb_device_descriptor descriptor;
+        if (0 == libusb_get_device_descriptor(devices[i], &descriptor)) {
+            if (vid == descriptor.idVendor && pid == descriptor.idProduct) {
+                libusb_device_handle *handle;
+                if (0 == libusb_open(devices[i], &handle)) {
+                    char usbSerial[64];
+                    if (0 == descriptor.iSerialNumber || 
+                        0 == libusb_get_string_descriptor_ascii(handle, descriptor.iSerialNumber, (unsigned char *)usbSerial, sizeof(usbSerial)))
+                        usbSerial[0] = '\0';
+  
+                    fprintf(stderr, "USB pid/vid match: vid = %d pid = %d serial='%s'\n", vid, pid, usbSerial);
+                    libusb_close(handle);
+                }
+            }
+        }
+    }
+    libusb_free_device_list(devices, 1);
+}
+
 int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
 {
     if (usbhandle == NULL) {
@@ -437,6 +463,7 @@ int main(int argc, char **argv)
     uSynergyContext context;
     int option = 0;
     int keyCodesFromStdin = 0;
+    int listUsbDevices = 1;
     char *synergyClientName = "amiga";
 
     while ((option = getopt(argc, argv,"n:s:t:d:h")) != -1) {
@@ -455,7 +482,7 @@ int main(int argc, char **argv)
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows][-s usbSerialNum] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows] [-s usbSerialNum] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
@@ -476,6 +503,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Initializing libusb: %s\n", libusb_strerror(libusbResult));
     }
     atexit(usb_cleanup);
+    if(listUsbDevices)
+        listUsbDeviceMatches(VENDOR_ID, PRODUCT_ID);
     usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerialNum);
 
     if (keyCodesFromStdin) {
