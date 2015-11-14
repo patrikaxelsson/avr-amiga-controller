@@ -39,7 +39,7 @@ enum ServerType {
     Linux,
     Mac,
     Windows,
-    Unknown
+    UnknownType
 };
 
 enum ServerType serverType = Linux;
@@ -360,7 +360,7 @@ int getKeycodesLength(enum ServerType serverType) {
         case Linux: return sizeof(linux_keycodes);
         case Mac: return sizeof(mac_keycodes);
         case Windows: return sizeof(windows_keycodes);
-        case Unknown: return 0;
+        case UnknownType: return 0;
     }
 }
 
@@ -369,7 +369,7 @@ uint8_t *getKeycodes(enum ServerType serverType) {
         case Linux: return linux_keycodes;
         case Mac: return mac_keycodes;
         case Windows: return windows_keycodes;
-        case Unknown: return NULL;
+        case UnknownType: return NULL;
     }
 }
 
@@ -378,7 +378,7 @@ char *getServerTypeName(enum ServerType serverType) {
         case Linux: return "linux";
         case Mac: return "mac";
         case Windows: return "windows";
-        case Unknown: return "unknown";
+        case UnknownType: return "unknown";
     }
 }
 
@@ -386,7 +386,7 @@ enum ServerType getServerType(const char *serverTypeName) {
    if(0 == strcasecmp("linux", serverTypeName)) return Linux;
    if(0 == strcasecmp("mac", serverTypeName)) return Mac;
    if(0 == strcasecmp("windows", serverTypeName)) return Windows;
-   else return Unknown;
+   else return UnknownType;
 }
 
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
@@ -463,7 +463,7 @@ int main(int argc, char **argv)
         keyCodesFromStdin = 1;
     }
 
-    if(Unknown == serverType) {
+    if(UnknownType == serverType) {
         fprintf(stderr, "Unknown server type!\n");
         return 1;
     }
