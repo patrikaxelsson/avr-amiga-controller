@@ -30,7 +30,7 @@
 #include <netdb.h>
 #include <getopt.h>
 
-#include <usb.h>
+#include <libusb-1.0/libusb.h>
 
 #include "../common.h"
 #include "keytables.h"
@@ -38,70 +38,61 @@
 enum ServerType {
     Linux,
     Mac,
-    Windows
+    Windows,
+    Unknown
 };
 
 enum ServerType serverType = Linux;
-
-uint8_t *keycodes = linux_keycodes;
+uint8_t *keycodes = NULL;
 
 int sockfd = 0;
 struct sockaddr_in serv_addr;
 struct hostent *server;
 
-usb_dev_handle *usbhandle;
-static usb_dev_handle *find_device(unsigned short, unsigned short, char *);
+libusb_device_handle *usbhandle = NULL;
+static libusb_device_handle *find_device(const unsigned short, const unsigned short, const char *);
 
 char *usbSerialNum = "";
 int debugLevel = 0;
 
-int init()
+int matchesSerial(const char *serial, const char *usbSerial)
 {
-    usb_init();
-    usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerialNum);
-    return 0;
+    return 0 == strlen(serial) || 0 == strcmp(serial, usbSerial);
 }
 
-static usb_dev_handle *find_device(unsigned short vid, unsigned short pid, char *serial)
+static libusb_device_handle *find_device(const unsigned short vid, const unsigned short pid, const char *serial)
 {
-    struct usb_bus *bus;
-    struct usb_device *dev;
-    usb_dev_handle *handle = 0;
-    char tmpSerialNum[64];
+    libusb_device_handle *handle = NULL;
+    libusb_device **devices;
+    ssize_t numDevices = libusb_get_device_list(NULL, &devices);
+    ssize_t i = 0;
 
-    usb_find_busses();
-    usb_find_devices();
-    for (bus = usb_busses; bus; bus = bus->next) {
-        for (dev = bus->devices; dev; dev = dev->next) {
-            if (dev->descriptor.idVendor == vid
-                && dev->descriptor.idProduct == pid) {
-
-                handle = usb_open(dev); /* we need to open the device in order to query strings */
-                if (!handle) {
-                    fprintf(stderr, "Warning: cannot open USB device: %s\n", usb_strerror());
-                    continue;
+    for (i = 0; i < numDevices; i++) {
+        struct libusb_device_descriptor descriptor;
+        if (0 == libusb_get_device_descriptor(devices[i], &descriptor)) {
+            if (vid == descriptor.idVendor && pid == descriptor.idProduct) {
+                if (0 == libusb_open(devices[i], &handle)) {
+                    char usbSerial[64];
+                    if (0 == descriptor.iSerialNumber || 
+                        0 == libusb_get_string_descriptor_ascii(handle, descriptor.iSerialNumber, (unsigned char *)usbSerial, sizeof(usbSerial)))
+                        usbSerial[0] = '\0';
+   
+                    if (matchesSerial(serial, usbSerial)) {
+                        fprintf(stderr, "Connected to USB device with serial '%s'\n", usbSerial);
+                        break;
+                    }
+                    else {
+                        libusb_close(handle);
+                        handle = NULL;
+                    }
                 }
-                
-                tmpSerialNum[0] = '\0';
-                if (dev->descriptor.iSerialNumber > 0) {
-                    usb_get_string_simple(handle, dev->descriptor.iSerialNumber, tmpSerialNum, sizeof(tmpSerialNum));
-                }
-
-                if (strlen(serial) > 0 &&
-                    strcmp(serial, tmpSerialNum) != 0) {
-                    fprintf(stderr, "Found USB device with correct vid and pid but serial '%s' doesn't match, skipping\n", tmpSerialNum);
-                    usb_close(handle);
-                    handle = 0;
-                }
-                else
-                    fprintf(stderr, "Connected to USB device with serial '%s'\n", tmpSerialNum);
             }
         }
-        if (handle)
-            break;
     }
-    if (!handle)
+    if (NULL == handle)
         fprintf(stderr, "Warning: Could not find USB device with vid=0x%x pid=0x%x serial='%s'\n", vid, pid, serial);
+
+    libusb_free_device_list(devices, 1);
     return handle;
 }
 
@@ -114,10 +105,10 @@ int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
         }
 
     }
-    int result = usb_control_msg(usbhandle, 0x40, bRequest, wValue, wIndex, 0, 0, 500);
+    int result = libusb_control_transfer(usbhandle, 0x40, bRequest, wValue, wIndex, 0, 0, 500);
     if (result < 0) {
-        fprintf(stderr, "Warning: Problem communicating with USB device, closing handle\n");
-        usb_close(usbhandle);
+        fprintf(stderr, "Warning: Problem communicating with USB device, closing handle: %s\n", libusb_strerror(result));
+        libusb_close(usbhandle);
         usbhandle = NULL;
     }
     return result;
@@ -249,12 +240,12 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
 }
 
 int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
-    const uint8_t amigaLeftShift = 0x60;
-    const uint8_t amigaCapsLock = 0x62;
-    const uint8_t amigaCursorDown = 0x4d;
-    const uint8_t amigaCursorUp = 0x4c;
-    const uint8_t amigaCursorLeft = 0x4f;
-    const uint8_t amigaCursorRight = 0x4e;
+    static const uint8_t amigaLeftShift = 0x60;
+    static const uint8_t amigaCapsLock = 0x62;
+    static const uint8_t amigaCursorDown = 0x4d;
+    static const uint8_t amigaCursorUp = 0x4c;
+    static const uint8_t amigaCursorLeft = 0x4f;
+    static const uint8_t amigaCursorRight = 0x4e;
 
     int didSpecialStuff = 0;
 
@@ -358,6 +349,8 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                     break;
             }
             break;
+        default:
+            break;
     }
     return didSpecialStuff; 
 }
@@ -367,7 +360,33 @@ int getKeycodesLength(enum ServerType serverType) {
         case Linux: return sizeof(linux_keycodes);
         case Mac: return sizeof(mac_keycodes);
         case Windows: return sizeof(windows_keycodes);
+        case Unknown: return 0;
     }
+}
+
+uint8_t *getKeycodes(enum ServerType serverType) {
+    switch(serverType) {
+        case Linux: return linux_keycodes;
+        case Mac: return mac_keycodes;
+        case Windows: return windows_keycodes;
+        case Unknown: return NULL;
+    }
+}
+
+char *getServerTypeName(enum ServerType serverType) {
+    switch(serverType) {
+        case Linux: return "linux";
+        case Mac: return "mac";
+        case Windows: return "windows";
+        case Unknown: return "unknown";
+    }
+}
+
+enum ServerType getServerType(const char *serverTypeName) {
+   if(0 == strcasecmp("linux", serverTypeName)) return Linux;
+   if(0 == strcasecmp("mac", serverTypeName)) return Mac;
+   if(0 == strcasecmp("windows", serverTypeName)) return Windows;
+   else return Unknown;
 }
 
 void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynergyBool down,
@@ -409,6 +428,10 @@ void s_clipboard(uSynergyCookie cookie, enum uSynergyClipboardFormat format,
     if (debugLevel) printf("clipboard, size=%d\n", size);
 }
 
+void usb_cleanup() {
+    libusb_exit(NULL);
+}
+
 int main(int argc, char **argv)
 {
     uSynergyContext context;
@@ -422,18 +445,7 @@ int main(int argc, char **argv)
                 synergyClientName = optarg; 
                 break;
             case 't':
-                if(!strcmp(optarg, "linux")) {
-                    keycodes = linux_keycodes;
-                    serverType = Linux;
-                }
-                else if(!strcmp(optarg, "mac")) {
-                    keycodes = mac_keycodes;
-                    serverType = Mac;
-                }
-                else if(!strcmp(optarg, "windows")) {
-                    keycodes = windows_keycodes;
-                    serverType = Windows;
-                }
+                serverType = getServerType(optarg);
                 break;
             case 's':
                 usbSerialNum = optarg;
@@ -451,15 +463,26 @@ int main(int argc, char **argv)
         keyCodesFromStdin = 1;
     }
 
-    printf("Server type: %s\n", serverType == Linux ? "linux" : serverType == Mac ? "mac" : "windows");
+    if(Unknown == serverType) {
+        fprintf(stderr, "Unknown server type!\n");
+        return 1;
+    }
 
-    init();
+    keycodes = getKeycodes(serverType);
+    printf("Server type: %s\n", getServerTypeName(serverType));
+
+    int libusbResult = libusb_init(NULL);
+    if(0 != libusbResult) {
+        fprintf(stderr, "Initializing libusb: %s\n", libusb_strerror(libusbResult));
+    }
+    atexit(usb_cleanup);
+    usbhandle = find_device(VENDOR_ID, PRODUCT_ID, usbSerialNum);
 
     if (keyCodesFromStdin) {
         int c;
         fprintf(stderr, "Will send stdin as raw amiga keycodes to the avr\n");
         while((c = getchar())) {
-            if (c < 0 || c == EOF) exit(0);
+            if (c < 0 || c == EOF) return 0;
             usb_send_amiga_key(c, c & 0x80);
         }
     }
