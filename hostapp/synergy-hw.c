@@ -113,7 +113,7 @@ void listUsbDeviceMatches(const unsigned short vid, const unsigned short pid)
                         0 == libusb_get_string_descriptor_ascii(handle, descriptor.iSerialNumber, (unsigned char *)usbSerial, sizeof(usbSerial)))
                         usbSerial[0] = '\0';
   
-                    fprintf(stderr, "USB pid/vid match: vid = %d pid = %d serial='%s'\n", vid, pid, usbSerial);
+                    fprintf(stderr, "USB device pid/vid match: vid=0x%04x pid=0x%04x serial='%s'\n", descriptor.idVendor, descriptor.idProduct, usbSerial);
                     libusb_close(handle);
                 }
             }
