@@ -55,6 +55,9 @@ static libusb_device_handle *find_device(const unsigned short, const unsigned sh
 char *usbSerialNum = "";
 int debugLevel = 0;
 
+unsigned int amigaMouseResWidth = 724 * 2;
+unsigned int amigaMouseResHeight = 283 * 4;
+
 int matchesSerial(const char *serial, const char *usbSerial)
 {
     return 0 == strlen(serial) || 0 == strcmp(serial, usbSerial);
@@ -78,7 +81,7 @@ static libusb_device_handle *find_device(const unsigned short vid, const unsigne
                         usbSerial[0] = '\0';
    
                     if (matchesSerial(serial, usbSerial)) {
-                        fprintf(stderr, "Connected to USB device with serial '%s'\n", usbSerial);
+                        fprintf(stderr, "Connected to USB device with serial='%s'\n", usbSerial);
                         break;
                     }
                     else {
@@ -140,15 +143,13 @@ int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
     return result;
 }
 
-int usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
+void usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
     static int count = 0;
     const uint8_t amigaKeyUpMask = 0x80;
-    int result;
     
-    result = usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0);
-    if (debugLevel) printf("send_amiga_key, amigaKey=%2x keyUp=%d count=%d - %d\n", amigaKey, keyUp, count++, result);
-
-    return result;
+    if(0 == usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0)) {
+        if (debugLevel) fprintf(stderr, "send_amiga_key, amigaKey=0x%2x keyUp=%d count=%d\n", amigaKey, keyUp, count++);
+    }
 }
 
 uSynergyBool s_connect(uSynergyCookie cookie)
@@ -225,18 +226,56 @@ uint32_t s_getTime()
 
 void s_trace(uSynergyCookie cookie, const char *text)
 {
-    printf("%s\n", text);
+    fprintf(stderr, "synergy, %s\n", text);
 }
 
-void s_screenActive(uSynergyCookie cookie, uSynergyBool active)
+int lastMouseMoveWasRelative = 0;
+uint16_t mouse_x = 0;
+uint16_t mouse_y = 0;
+
+int mouseAbsHasMoved(uint16_t x, uint16_t y) {
+    const int16_t diff_x = x - mouse_x;
+    const int16_t diff_y = y - mouse_y;
+    return diff_x != 0 || diff_y != 0;
+}
+
+void mouseAbsMove(uint16_t x, uint16_t y) {
+    const int16_t diff_x = x - mouse_x;
+    const int16_t diff_y = y - mouse_y;
+
+    if(0 == usb_request(REQ_MOUSE_REL, diff_x, diff_y)) {
+        mouse_x = x;
+        mouse_y = y;
+        if (debugLevel > 1) fprintf(stderr, "mouse, abs.move to x=%d y=%d\n", x, y);
+    }
+}
+
+void mouseAbsResetToClosestCorner(uint16_t x, uint16_t y) {
+    int mouseMoveToReset_x = x < (amigaMouseResWidth / 2) ? -amigaMouseResWidth : amigaMouseResWidth;
+    int mouseMoveToReset_y = y < (amigaMouseResHeight / 2) ? -amigaMouseResHeight : amigaMouseResHeight;
+        
+    if(0 == usb_request(REQ_MOUSE_REL, mouseMoveToReset_x, mouseMoveToReset_y)) {
+        mouse_x = mouseMoveToReset_x < 0 ? 0 : amigaMouseResWidth - 1;
+        mouse_y = mouseMoveToReset_y < 0 ? 0 : amigaMouseResHeight - 1;
+        if (debugLevel) fprintf(stderr, "mouse, abs.reset to x=%d y=%d\n", mouse_x, mouse_y);
+    }
+}
+
+void s_screenActive(uSynergyCookie cookie, uSynergyBool active, int16_t x, int16_t y, uint16_t modifiers)
 {
-    if (debugLevel) printf("screenActive, active=%d\n", active);
+    if (debugLevel) fprintf(stderr, "screenActive, active=%d x=%d y=%d modifiers=0x%04x lastMouseMoveWasRelative=%d\n", active, x, y, modifiers, lastMouseMoveWasRelative);
     
     // Hack for releasing any modifier keys used when switching from Amiga to PC
     if (active == 0) {
         uint8_t amigaModifierKey;
         for (amigaModifierKey = 0x60; amigaModifierKey < 0x68; amigaModifierKey++) {
             usb_send_amiga_key(amigaModifierKey, 1);
+        }
+    } 
+    else {
+        if(!lastMouseMoveWasRelative) {
+            mouseAbsResetToClosestCorner(x, y); 
+            mouseAbsMove(x, y);
         }
     }
 }
@@ -248,21 +287,30 @@ void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
     static uint8_t old_mstate = 0;
     uint8_t mstate =
         (buttonLeft ? 1 : 0) | (buttonRight ? 2 : 0) | (buttonMiddle ? 4 : 0);
-    int result;
+
+    if(mouseAbsHasMoved(x, y)) {
+        if(lastMouseMoveWasRelative) {
+            mouseAbsResetToClosestCorner(x, y);
+            lastMouseMoveWasRelative = 0;
+        }
+        mouseAbsMove(x, y);
+    }
 
     if (mstate != old_mstate) {
-        result = usb_request(REQ_MOUSE_BTN, mstate, 0);
-        if (debugLevel) printf("mouse, button=%d,%d,%d - %d\n", buttonLeft,
-               buttonMiddle, buttonRight, result);
-        old_mstate = mstate;
+        if(0 == usb_request(REQ_MOUSE_BTN, mstate, 0)) {
+            old_mstate = mstate;
+            lastMouseMoveWasRelative = 0;
+            if (debugLevel > 1) fprintf(stderr, "mouse, button=%d,%d,%d\n", buttonLeft, buttonMiddle, buttonRight);
+        }
     }
 }
 
 void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
 {
-    int result;
-    result = usb_request(REQ_MOUSE_REL, x, y);
-    if (debugLevel) printf("mouse, rel=%d, %d - %d\n", x, y, result);
+    if(0 == usb_request(REQ_MOUSE_REL, x, y)) {
+        lastMouseMoveWasRelative = 1;
+        if (debugLevel) fprintf(stderr, "mouse, rel.move x=%d y=%d\n", x, y);
+    }
 }
 
 int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
@@ -419,7 +467,7 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                 uSynergyBool repeat)
 {
     if(debugLevel > 1)
-        printf("keyboard - incoming, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
+        fprintf(stderr, "keyboard - incoming, key=0x%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
 
     if (!repeat) {
         if(!doSpecialKeyActions(key, modifiers, down)) {
@@ -429,11 +477,11 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                     usb_send_amiga_key(amigaKey, !down);
                 }
                 else {
-                    if (debugLevel) printf("keyboard - ignored, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
+                    if (debugLevel > 1) fprintf(stderr, "keyboard - ignored, key=0x%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
                 }
             }
             else {
-                if (debugLevel) printf("keyboard - unmapped, key=%4x modifiers=%04x down=%d\n", key, modifiers, down);
+                if (debugLevel) fprintf(stderr, "keyboard - unmapped, key=0x%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
             }
         }
     }
@@ -444,14 +492,14 @@ void s_joystick(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons,
                 int8_t leftStickX, int8_t leftStickY, int8_t rightStickX,
                 int8_t rightStickY)
 {
-    if (debugLevel) printf("joystick, left=%d,%d right=%d,%d\n", leftStickX, leftStickY,
+    if (debugLevel) fprintf(stderr, "joystick, left=%d,%d right=%d,%d\n", leftStickX, leftStickY,
            rightStickX, rightStickY);
 }
 
 void s_clipboard(uSynergyCookie cookie, enum uSynergyClipboardFormat format,
                  const uint8_t * data, uint32_t size)
 {
-    if (debugLevel) printf("clipboard, size=%d\n", size);
+    if (debugLevel) fprintf(stderr, "clipboard, size=%d\n", size);
 }
 
 void usb_cleanup() {
@@ -461,12 +509,12 @@ void usb_cleanup() {
 int main(int argc, char **argv)
 {
     uSynergyContext context;
-    int option = 0;
+    char *synergyClientName = "amiga";
     int keyCodesFromStdin = 0;
     int listUsbDevices = 1;
-    char *synergyClientName = "amiga";
+    int option = 0;
 
-    while ((option = getopt(argc, argv,"n:s:t:d:h")) != -1) {
+    while ((option = getopt(argc, argv,"n:t:s:x:y:d:h")) != -1) {
         switch (option) {
             case 'n':
                 synergyClientName = optarg; 
@@ -477,26 +525,24 @@ int main(int argc, char **argv)
             case 's':
                 usbSerialNum = optarg;
                 break;
+            case 'x':
+                amigaMouseResWidth = atoi(optarg);
+                break;
+            case 'y':
+                amigaMouseResHeight = atoi(optarg);
+                break;
             case 'd':
                 debugLevel = atoi(optarg);
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows] [-s usbSerialNum] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows] [-s usbSerialNum] [-x amigaMouseResolutionWidth] [-y amigaMouseResulutionHeight] [-d debugLevel]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
     if (optind < argc && strcmp(argv[optind], "-") == 0) {
         keyCodesFromStdin = 1;
     }
-
-    if(UnknownType == serverType) {
-        fprintf(stderr, "Unknown server type!\n");
-        return 1;
-    }
-
-    keycodes = getKeycodes(serverType);
-    printf("Server type: %s\n", getServerTypeName(serverType));
 
     int libusbResult = libusb_init(NULL);
     if(0 != libusbResult) {
@@ -515,6 +561,16 @@ int main(int argc, char **argv)
             usb_send_amiga_key(c, c & 0x80);
         }
     }
+    
+    if(UnknownType == serverType) {
+        fprintf(stderr, "Unknown server type!\n");
+        return 1;
+    }
+
+    keycodes = getKeycodes(serverType);
+    fprintf(stderr, "Server type: %s\n", getServerTypeName(serverType));
+
+    fprintf(stderr, "Amiga mouse resolution: %dx%d\n", amigaMouseResWidth, amigaMouseResHeight);
 
     uSynergyInit(&context);
     context.m_connectFunc = &s_connect;
@@ -530,8 +586,8 @@ int main(int argc, char **argv)
     context.m_joystickCallback = &s_joystick;
     context.m_clipboardCallback = &s_clipboard;
     context.m_clientName = synergyClientName;
-    context.m_clientWidth = 1000;
-    context.m_clientHeight = 1000;
+    context.m_clientWidth = amigaMouseResWidth;
+    context.m_clientHeight = amigaMouseResHeight;
 
     for (;;) {
         uSynergyUpdate(&context);

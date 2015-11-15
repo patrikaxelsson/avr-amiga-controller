@@ -279,16 +279,21 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 	}
 	else if (USYNERGY_IS_PACKET("CINN"))
 	{
+        int16_t x, y;
+        uint16_t modifiers;
 		// Screen enter. Reply with CNOP
 		//		kMsgCEnter 			= "CINN%2i%2i%4i%2i"
 
 		// Obtain the Synergy sequence number
+		x = sNetToNative16(message+8);
+		y = sNetToNative16(message+10);
 		context->m_sequenceNumber = sNetToNative32(message + 12);
+		modifiers = sNetToNative32(message + 16);
 		context->m_isCaptured = USYNERGY_TRUE;
 
 		// Call callback
 		if (context->m_screenActiveCallback != 0L)
-			context->m_screenActiveCallback(context->m_cookie, USYNERGY_TRUE);
+			context->m_screenActiveCallback(context->m_cookie, USYNERGY_TRUE, x, y, modifiers);
 	}
 	else if (USYNERGY_IS_PACKET("COUT"))
 	{
@@ -298,7 +303,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 
 		// Call callback
 		if (context->m_screenActiveCallback != 0L)
-			context->m_screenActiveCallback(context->m_cookie, USYNERGY_FALSE);
+			context->m_screenActiveCallback(context->m_cookie, USYNERGY_FALSE, 0, 0, 0);
 	}
 	else if (USYNERGY_IS_PACKET("DMDN"))
 	{

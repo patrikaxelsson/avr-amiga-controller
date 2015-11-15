@@ -229,9 +229,12 @@ This callback is called when Synergy makes the screen active or inactive. This
 callback is usually sent when the mouse enters or leaves the screen.
 
 @param cookie		Cookie supplied in the Synergy context
-@param active		Activation flag, 1 if the screen has become active, 0 if the screen has become inactive
+@param active		Activation flag, 1 if the screen has become active, 0 if the screen has become inactivie
+@param x            Enter mouse? x
+@param x            Enter mouse? y
+@param modifiers    Keyboard? modifiers
 **/
-typedef void		(*uSynergyScreenActiveCallback)(uSynergyCookie cookie, uSynergyBool active);
+typedef void		(*uSynergyScreenActiveCallback)(uSynergyCookie cookie, uSynergyBool active, int16_t x, int16_t y, uint16_t modifiers);
 
 
 
