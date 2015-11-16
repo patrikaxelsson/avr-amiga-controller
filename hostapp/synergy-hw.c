@@ -264,16 +264,16 @@ void mouseAbsResetToNearestCorner(uint16_t x, uint16_t y) {
 void mouseAbsMoveToNearestSide(uint16_t x, uint16_t y) {
     const uint16_t distanceLeft = x;
     const uint16_t distanceRight = (amigaMouseResWidth - 1) - x;
-    const uint16_t distanceTop = y;
-    const uint16_t distanceBottom = (amigaMouseResHeight - 1) - y;
+    const uint16_t distanceUp = y;
+    const uint16_t distanceDown = (amigaMouseResHeight - 1) - y;
 
-    if(distanceLeft < distanceRight && distanceLeft < distanceBottom && distanceLeft < distanceTop)
+    if(distanceLeft < distanceRight && distanceLeft < distanceDown && distanceLeft < distanceUp)
         mouseAbsMove(0, y);
-    else if(distanceRight < distanceLeft && distanceRight < distanceBottom && distanceRight < distanceTop)
+    else if(distanceRight < distanceLeft && distanceRight < distanceDown && distanceRight < distanceUp)
         mouseAbsMove(amigaMouseResWidth - 1, y);
-    else if(distanceTop < distanceLeft && distanceTop < distanceRight && distanceTop < distanceBottom)
+    else if(distanceUp < distanceLeft && distanceUp < distanceRight && distanceUp < distanceDown)
         mouseAbsMove(x, 0);
-    else if(distanceBottom < distanceLeft && distanceBottom < distanceRight && distanceBottom < distanceTop)
+    else if(distanceDown < distanceLeft && distanceDown < distanceRight && distanceDown < distanceUp)
         mouseAbsMove(x, amigaMouseResHeight - 1);
 }
 
