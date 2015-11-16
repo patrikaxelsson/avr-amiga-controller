@@ -250,7 +250,7 @@ void mouseAbsMove(uint16_t x, uint16_t y) {
     }
 }
 
-void mouseAbsResetToClosestCorner(uint16_t x, uint16_t y) {
+void mouseAbsResetToNearestCorner(uint16_t x, uint16_t y) {
     int mouseMoveToReset_x = x < (amigaMouseResWidth / 2) ? -amigaMouseResWidth : amigaMouseResWidth;
     int mouseMoveToReset_y = y < (amigaMouseResHeight / 2) ? -amigaMouseResHeight : amigaMouseResHeight;
         
@@ -259,6 +259,22 @@ void mouseAbsResetToClosestCorner(uint16_t x, uint16_t y) {
         mouse_y = mouseMoveToReset_y < 0 ? 0 : amigaMouseResHeight - 1;
         if (debugLevel) fprintf(stderr, "mouse, abs.reset to x=%d y=%d\n", mouse_x, mouse_y);
     }
+}
+
+void mouseAbsMoveToNearestSide(uint16_t x, uint16_t y) {
+    const uint16_t distanceLeft = x;
+    const uint16_t distanceRight = (amigaMouseResWidth - 1) - x;
+    const uint16_t distanceTop = y;
+    const uint16_t distanceBottom = (amigaMouseResHeight - 1) - y;
+
+    if(distanceLeft < distanceRight && distanceLeft < distanceBottom && distanceLeft < distanceTop)
+        mouseAbsMove(0, y);
+    else if(distanceRight < distanceLeft && distanceRight < distanceBottom && distanceRight < distanceTop)
+        mouseAbsMove(amigaMouseResWidth - 1, y);
+    else if(distanceTop < distanceLeft && distanceTop < distanceRight && distanceTop < distanceBottom)
+        mouseAbsMove(x, 0);
+    else if(distanceBottom < distanceLeft && distanceBottom < distanceRight && distanceBottom < distanceTop)
+        mouseAbsMove(x, amigaMouseResHeight - 1);
 }
 
 void s_screenActive(uSynergyCookie cookie, uSynergyBool active, int16_t x, int16_t y, uint16_t modifiers)
@@ -271,10 +287,14 @@ void s_screenActive(uSynergyCookie cookie, uSynergyBool active, int16_t x, int16
         for (amigaModifierKey = 0x60; amigaModifierKey < 0x68; amigaModifierKey++) {
             usb_send_amiga_key(amigaModifierKey, 1);
         }
+        if(!lastMouseMoveWasRelative) {
+            // Using globals here as we get no coordinates when leaving the screen
+            mouseAbsMoveToNearestSide(mouse_x, mouse_y);
+        }
     } 
     else {
         if(!lastMouseMoveWasRelative) {
-            mouseAbsResetToClosestCorner(x, y); 
+            mouseAbsResetToNearestCorner(x, y); 
             mouseAbsMove(x, y);
         }
     }
@@ -290,7 +310,7 @@ void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
 
     if(mouseAbsHasMoved(x, y)) {
         if(lastMouseMoveWasRelative) {
-            mouseAbsResetToClosestCorner(x, y);
+            mouseAbsResetToNearestCorner(x, y);
             lastMouseMoveWasRelative = 0;
         }
         mouseAbsMove(x, y);
