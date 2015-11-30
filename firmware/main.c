@@ -171,11 +171,16 @@ void keyboard(uint8_t k)
     }
 }
 
-void reset(void)
+void startReset(void)
 {
     SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
     _delay_ms(500);
+}
+
+void endReset(void)
+{
     PULLUP_PINS(KEYB_PORT,KEYB_DDR, _BV(KEYB_CLK));
+    _delay_ms(200);
 }
 
 void SetupHardware(void)
@@ -250,6 +255,7 @@ void EVENT_USB_Device_ControlRequest(void)
     const uint8_t keyRightAmiga = 0x67;
     const uint8_t rebootModifiersMask = _BV(keyCtrl & modifierNumMask) | _BV(keyLeftAmiga & modifierNumMask) | _BV(keyRightAmiga & modifierNumMask);
     static uint8_t modifiers = 0x00;
+	static uint8_t inReset = 0;
 
     switch (USB_ControlRequest.bmRequestType) {
     case 0x40:
@@ -277,15 +283,21 @@ void EVENT_USB_Device_ControlRequest(void)
             }
 
             if ((modifiers & rebootModifiersMask) == rebootModifiersMask) {
-                reset();
-                // Reset modifiers as usb device gets locked up on sync() as it works now and
-                // will miss releae of the modifiers
-                modifiers = 0x00;
+                startReset();
+                inReset = 1;
             }
-
-            keyboard(USB_ControlRequest.wValue);
-            Endpoint_ClearSETUP();
-            Endpoint_ClearIN();
+            else {
+                if(inReset) {
+                    endReset();
+                    inReset = 0;
+                    // Reset modifiers as usb device gets locked up on sync() as it works now and
+                    // will miss release of the modifiers
+                    modifiers = 0x00;
+                }
+                keyboard(USB_ControlRequest.wValue);
+                Endpoint_ClearSETUP();
+                Endpoint_ClearIN();
+            }
             break;
         }
         break;

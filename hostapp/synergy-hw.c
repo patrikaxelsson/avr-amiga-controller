@@ -134,7 +134,7 @@ int usb_request(uint8_t bRequest, uint16_t wValue, uint16_t wIndex)
         }
 
     }
-    int result = libusb_control_transfer(usbhandle, 0x40, bRequest, wValue, wIndex, 0, 0, 500);
+    int result = libusb_control_transfer(usbhandle, 0x40, bRequest, wValue, wIndex, 0, 0, 1000);
     if (result < 0) {
         fprintf(stderr, "Warning: Problem communicating with USB device, closing handle: %s\n", libusb_strerror(result));
         libusb_close(usbhandle);
