@@ -556,7 +556,7 @@ int main(int argc, char **argv)
                 break;
             case 'h':
             default:
-                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows] [-s usbSerialNum] [-x amigaMouseResolutionWidth] [-y amigaMouseResulutionHeight] [-d debugLevel]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-n synergyClientName] [-t synergyServerType linux/mac/windows] [-s usbSerialNum] [-x amigaMouseResolutionWidth] [-y amigaMouseResulutionHeight] [-d debugLevel] [-]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
