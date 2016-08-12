@@ -512,8 +512,8 @@ void s_joystick(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons,
                 int8_t leftStickX, int8_t leftStickY, int8_t rightStickX,
                 int8_t rightStickY)
 {
-    if (debugLevel) fprintf(stderr, "joystick, left=%d,%d right=%d,%d\n", leftStickX, leftStickY,
-           rightStickX, rightStickY);
+    if (debugLevel) fprintf(stderr, "joystick, num=%d buttons=0x%04d leftStick(x,y)=%d,%d rightStick(x,y)=%d,%d\n",
+            joyNum, buttons, leftStickX, leftStickY, rightStickX, rightStickY);
 }
 
 void s_clipboard(uSynergyCookie cookie, enum uSynergyClipboardFormat format,
