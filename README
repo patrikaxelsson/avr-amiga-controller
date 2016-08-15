@@ -74,4 +74,4 @@ Launch synergy-hw (no argument necessary, screen name and server
 Press windows-a to flip to Amiga
 Press windows-z to return to PC.
 
-While controlling Amiga, pressing End will reboot the Amiga.
+While controlling Amiga, pressing Ctrl+Super+Super will reboot the Amiga.
