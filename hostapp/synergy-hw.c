@@ -148,7 +148,7 @@ void usb_send_amiga_key(uint8_t amigaKey, uint8_t keyUp) {
     const uint8_t amigaKeyUpMask = 0x80;
     
     if(0 == usb_request(REQ_KEYBOARD, amigaKey | (keyUp ? amigaKeyUpMask : 0x00) , 0)) {
-        if (debugLevel) fprintf(stderr, "send_amiga_key, amigaKey=0x0%2x keyUp=%d count=%d\n", amigaKey, keyUp, count++);
+        if (debugLevel) fprintf(stderr, "send_amiga_key, amigaKey=0x%02x keyUp=%d count=%d\n", amigaKey, keyUp, count++);
     }
 }
 
@@ -487,7 +487,7 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                 uSynergyBool repeat)
 {
     if(debugLevel > 1)
-        fprintf(stderr, "keyboard - incoming, key=0x0%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
+        fprintf(stderr, "keyboard - incoming, key=0x%04x modifiers=0x%04x down=%d\n", key, modifiers, down);
 
     if (!repeat) {
         if(!doSpecialKeyActions(key, modifiers, down)) {
@@ -497,11 +497,11 @@ void s_keyboard(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, uSynerg
                     usb_send_amiga_key(amigaKey, !down);
                 }
                 else {
-                    if (debugLevel > 1) fprintf(stderr, "keyboard - ignored, key=0x0%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
+                    if (debugLevel > 1) fprintf(stderr, "keyboard - ignored, key=0x%04x modifiers=0x%04x down=%d\n", key, modifiers, down);
                 }
             }
             else {
-                if (debugLevel) fprintf(stderr, "keyboard - unmapped, key=0x0%4x modifiers=0x%04x down=%d\n", key, modifiers, down);
+                if (debugLevel) fprintf(stderr, "keyboard - unmapped, key=0x%04x modifiers=0x%04x down=%d\n", key, modifiers, down);
             }
         }
     }
