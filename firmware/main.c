@@ -64,6 +64,31 @@
 
 volatile uint8_t got_sync;
 
+enum KeybState {
+	Keyb_InSync,
+	Keyb_Reset,
+	Keyb_LostSync
+};
+
+static volatile enum KeybState keybState = Keyb_LostSync;
+
+enum AmigaKey {
+    AmigaKey_Ctrl       = 0x63,
+    AmigaKey_LeftAmiga  = 0x66,
+    AmigaKey_RightAmiga = 0x67
+};
+
+const uint8_t AmigaKeyb_KeyMask = 0x7f;
+const uint8_t AmigaKeyb_KeyUpMask = 0x80;
+const uint8_t AmigaKeyb_IsModifierMask = 0x60;
+#define AmigaKeyb_ModifierNumMask 0x07
+const uint8_t AmigaKeyb_RebootModifiersMask = 
+    1 << (AmigaKey_Ctrl & AmigaKeyb_ModifierNumMask) |
+    1 << (AmigaKey_LeftAmiga & AmigaKeyb_ModifierNumMask) |
+    1 << (AmigaKey_RightAmiga & AmigaKeyb_ModifierNumMask);
+
+static volatile uint8_t keybModifiers = 0x00;
+
 inline static void kclock(void) {
     _delay_us(20);
     SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
@@ -89,7 +114,7 @@ ISR(INT1_vect)
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
 } 
 
-uint8_t kwaithandshake(void) {
+bool kwaithandshake(void) {
     uint16_t i;
 
     EIMSK &= ~_BV(KEYB_INT); // disable INT1
@@ -97,8 +122,7 @@ uint8_t kwaithandshake(void) {
     got_sync = 0;
     EIMSK |= _BV(KEYB_INT); // enable INT1
     // Wait max ~143ms (47666 * 3us) for handshake
-    for(i = 0; i < 47666; i++)
-    {
+    for(i = 0; i < 47666; i++) {
         if(got_sync) return true;
         _delay_us(3);
     }
@@ -106,22 +130,28 @@ uint8_t kwaithandshake(void) {
     return false;
 }
 
-void kregainsync(void)
-{
-    while(1)
-    {
-        kdat(1); // Keep clocking out 1
-        if(kwaithandshake()) {
-            PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
-            return;
-        }
-    }
-}
-
-void kwaitbusfree(void)
+bool kisbusfree(void)
 {
     const uint8_t floatMask = _BV(KEYB_CLK) | _BV(KEYB_DATA);
-    while((KEYB_PIN & floatMask) != floatMask);
+    uint8_t i;
+    for(i = 0; i < 100; i++) {
+        if((KEYB_PIN & floatMask) == floatMask) return true;
+        _delay_us(1);
+    }
+    return false;
+}
+
+bool kregainsync(void)
+{
+    if(!kisbusfree()) return false;
+	
+    kdat(1); // Clock out 1 and wait for handshake
+    PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
+    if(kwaithandshake()) {
+        keybState = Keyb_InSync;
+        return true;
+    }
+    return false;
 }
 
 volatile uint8_t xc;
@@ -147,12 +177,12 @@ void mouse(void)
     _delay_us(100);
 }
 
-void keyboard(uint8_t k)
+bool keyboard(uint8_t k)
 {
-    if(k == 0xff) return;
-
-    kwaitbusfree();
-
+    if(k == 0xff) return false;
+    if(!kisbusfree()) return false;
+        
+    LEDs_TurnOnLEDs(LEDS_LED2);
     kdat((k>>6)&1);
     kdat((k>>5)&1);
     kdat((k>>4)&1);
@@ -163,24 +193,40 @@ void keyboard(uint8_t k)
     kdat((k>>7)&1);
     PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_DATA));
     if(kwaithandshake()) {
-        LEDs_ToggleLEDs(LEDS_LED2);
+        LEDs_TurnOnLEDs(LEDS_LED1);
+        LEDs_TurnOffLEDs(LEDS_LED2);
+        return true;
     }
     else {
-        LEDs_ToggleLEDs(LEDS_LED1);
-        kregainsync();
+        keybState = Keyb_LostSync;
+        LEDs_TurnOffLEDs(LEDS_LED1 | LEDS_LED2);
+        return false;
     }
 }
 
-void startReset(void)
+volatile uint8_t resetWaitCount = 0;
+void kstartreset(void)
 {
+    keybState = Keyb_Reset;
+    resetWaitCount = 0;
     SINK_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
-    _delay_ms(500);
+    LEDs_TurnOffLEDs(LEDS_ALL_LEDS);
 }
 
-void endReset(void)
-{
-    PULLUP_PINS(KEYB_PORT,KEYB_DDR, _BV(KEYB_CLK));
-    _delay_ms(200);
+bool kcompletereset(void) {
+    LEDs_ToggleLEDs(LEDS_ALL_LEDS);
+    _delay_ms(50);
+    
+    if(resetWaitCount < 10)
+        resetWaitCount += 1;
+
+    if(resetWaitCount < 10 ||
+       (keybModifiers & AmigaKeyb_RebootModifiersMask) == AmigaKeyb_RebootModifiersMask) return false;
+
+    PULLUP_PINS(KEYB_PORT, KEYB_DDR, _BV(KEYB_CLK));
+    keybState = Keyb_LostSync;
+    LEDs_TurnOffLEDs(LEDS_ALL_LEDS);
+    return true;
 }
 
 void SetupHardware(void)
@@ -205,10 +251,8 @@ void SetupHardware(void)
     EIFR = _BV(KEYB_INT); // clear INT1 interrupt
 
     sei();
-    kwaitbusfree();
-    kregainsync();
-    keyboard(0xfd);
-    keyboard(0xfe);
+    //keyboard(0xfd);
+    //keyboard(0xfe);
 
     USB_Init();
 
@@ -218,12 +262,26 @@ void SetupHardware(void)
 int main(void)
 {
     SetupHardware();
-    LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 
     sei();
 
+    LEDs_TurnOffLEDs(LEDS_ALL_LEDS);
+
     for (;;) {
         USB_USBTask();
+        switch(keybState) {
+            case Keyb_LostSync:
+                if(kregainsync()) LEDs_TurnOnLEDs(LEDS_LED1);
+                else              LEDs_TurnOffLEDs(LEDS_LED1);
+                break;
+            case Keyb_Reset:
+                kcompletereset();
+                break;
+            default:
+                break;
+        }
+
+        //LEDs_TurnOffLEDs(LEDS_LED1);
     }
 }
 
@@ -245,21 +303,7 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 
 void EVENT_USB_Device_ControlRequest(void)
 {
-    const uint8_t keyMask = 0x7f;
-    const uint8_t keyUpMask = 0x80;
-    const uint8_t isModifierMask = 0x60;
-    const uint8_t modifierNumMask = 0x07;
-
-    const uint8_t keyCtrl = 0x63;
-    const uint8_t keyLeftAmiga = 0x66;
-    const uint8_t keyRightAmiga = 0x67;
-    const uint8_t rebootModifiersMask = _BV(keyCtrl & modifierNumMask) | _BV(keyLeftAmiga & modifierNumMask) | _BV(keyRightAmiga & modifierNumMask);
-    static uint8_t modifiers = 0x00;
-	static uint8_t inReset = 0;
-
-    switch (USB_ControlRequest.bmRequestType) {
-    case 0x40:
-        
+    if(USB_ControlRequest.bmRequestType == 0x40) {
         switch (USB_ControlRequest.bRequest) {
         case REQ_MOUSE_REL:
             dx += (int16_t)USB_ControlRequest.wValue;
@@ -274,32 +318,23 @@ void EVENT_USB_Device_ControlRequest(void)
             Endpoint_ClearIN();
             break;
         case REQ_KEYBOARD:
-            if ((USB_ControlRequest.wValue & (keyMask & ~modifierNumMask)) == isModifierMask) {
-                uint8_t modifierBit = _BV(USB_ControlRequest.wValue & modifierNumMask);
-                if(USB_ControlRequest.wValue & keyUpMask)
-                    modifiers &= ~modifierBit;
+            if ((USB_ControlRequest.wValue & (AmigaKeyb_KeyMask & ~AmigaKeyb_ModifierNumMask)) == AmigaKeyb_IsModifierMask) {
+                uint8_t modifierBit = _BV(USB_ControlRequest.wValue & AmigaKeyb_ModifierNumMask);
+                if(USB_ControlRequest.wValue & AmigaKeyb_KeyUpMask)
+                    keybModifiers &= ~modifierBit;
                 else
-                    modifiers |= modifierBit;
+                    keybModifiers |= modifierBit;
             }
 
-            if ((modifiers & rebootModifiersMask) == rebootModifiersMask) {
-                startReset();
-                inReset = 1;
+            if ((keybModifiers & AmigaKeyb_RebootModifiersMask) == AmigaKeyb_RebootModifiersMask) {
+                kstartreset();
             }
-            else {
-                if(inReset) {
-                    endReset();
-                    inReset = 0;
-                    // Reset modifiers as usb device gets locked up on sync() as it works now and
-                    // will miss release of the modifiers
-                    modifiers = 0x00;
-                }
+            else if(keybState == Keyb_InSync) {
                 keyboard(USB_ControlRequest.wValue);
-                Endpoint_ClearSETUP();
-                Endpoint_ClearIN();
             }
+            Endpoint_ClearSETUP();
+            Endpoint_ClearIN();
             break;
         }
-        break;
     }
 }
