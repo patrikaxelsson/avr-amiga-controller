@@ -13,7 +13,7 @@ It works as follows:
       (Find this in the hostapp directory.)
  - The firmware is flashed to an Atmega32U2 or Atmega32U4 board 
       (such as Minimus 32 AVR or Pro Micro (with LUFA Bootloader - 
-	   http://www.stanleylio.com/home/usblufa))
+	   http://www.stanleylio.com/home/usblufa ))
  - synergy-hw streams input to the AVR.
  - The AVR emulates bus mouse and amiga keyboard signals 
        (at hardware level)
