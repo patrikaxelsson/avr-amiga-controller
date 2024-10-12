@@ -101,7 +101,7 @@ enum uSynergyClipboardFormat
 #define				USYNERGY_NUM_JOYSTICKS			4				/* Maximum number of supported joysticks */
 
 #define				USYNERGY_PROTOCOL_MAJOR			1				/* Major protocol version */
-#define				USYNERGY_PROTOCOL_MINOR			4				/* Minor protocol version */
+#define				USYNERGY_PROTOCOL_MINOR			6				/* Minor protocol version */
 
 #define				USYNERGY_IDLE_TIMEOUT			2000			/* Timeout in milliseconds before reconnecting */
 
