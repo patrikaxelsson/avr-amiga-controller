@@ -8,7 +8,7 @@ uint8_t linux_keycodes[] = {
     0xff, // 06 
     0xff, // 07 
     0xff, // 08 
-    0x45, // 09 
+    0x45, // 09 escape
     0x01, // 0A 1
     0x02, // 0B 2
     0x03, // 0C 3
@@ -50,7 +50,7 @@ uint8_t linux_keycodes[] = {
     0x2a, // 30 '
     0x00, // 31 `
     0x60, // 32 lshift
-    0x2b, // 33 #
+    0x2b, // 33 # / international 1
     0x31, // 34 z
     0x32, // 35 x
     0x33, // 36 c
@@ -62,7 +62,7 @@ uint8_t linux_keycodes[] = {
     0x39, // 3C .
     0x3a, // 3D /
     0x61, // 3E rshift
-    0x5d, // 3F 
+    0x5d, // 3F numpad asterisk
     0x64, // 40 lalt
     0x40, // 41 space
     0x62, // 42 caps lock
@@ -93,9 +93,9 @@ uint8_t linux_keycodes[] = {
     0x3c, // 5B numpad .
     0xff, // 5C 
     0xff, // 5D 
-    0x30, // 5E |
-    0xff, // 5F
-    0xff, // 60 
+    0x30, // 5E | / international 2
+    0x5f, // 5F F11 -> help (for keyboards missing insert)
+    0x67, // 60 F12 -> right amiga (for keyboard missing right windows and menu)
     0xff, // 61 
     0xff, // 62 
     0xff, // 63 
@@ -104,19 +104,19 @@ uint8_t linux_keycodes[] = {
     0xff, // 66 
     0xff, // 67 
     0x43, // 68 numpad enter
-    0x63, // 69 right ctrl -> amiga ctrl 
+    0x63, // 69 right ctrl -> ctrl
     0x5c, // 6A numpad /
-    0xff, // 6B 
-    0x65, // 6C altgr
+    0x6d, // 6B printscreen
+    0x65, // 6C altgr -> ralt
     0xff, // 6D 
-    0xff, // 6E 
+    0x70, // 6E home
     0x4c, // 6F curs up
-    0xff, // 70 
+    0x48, // 70 page up
     0x4f, // 71 curs left
     0x4e, // 72 curs right
-    0xff, // 73 
+    0x71, // 73 end
     0x4d, // 74 curs down
-    0xff, // 75 
+    0x49, // 75 page down
     0x5f, // 76 insert -> help
     0x46, // 77 delete
     0xff, // 78 
@@ -126,15 +126,15 @@ uint8_t linux_keycodes[] = {
     0xff, // 7C 
     0xff, // 7D 
     0xff, // 7E 
-    0xff, // 7F 
+    0x6e, // 7F pause / break
     0xff, // 80 
     0xff, // 81 
     0xff, // 82 
     0xff, // 83 
     0xff, // 84 
-    0x66, // 85 left amiga
-    0x67, // 86 right amiga
-    0x67, // 87 windows menu key -> right amiga
+    0x66, // 85 left windows -> left amiga
+    0x67, // 86 right windows -> right amiga
+    0x67, // 87 menu key -> right amiga
 };
 
 uint8_t mac_keycodes[] = {
@@ -181,7 +181,7 @@ uint8_t mac_keycodes[] = {
     0x2a, // 28 "
     0x27, // 29 k
     0x29, // 2A :
-    0x2b, // 2B empty key next to return
+    0x2b, // 2B # / international 1
     0x38, // 2C <
     0x3a, // 2D ?
     0x36, // 2E n
@@ -189,19 +189,19 @@ uint8_t mac_keycodes[] = {
     0x39, // 30 >
     0x42, // 31 tab
     0x40, // 32 space
-    0x30, // 33 empty key next to left shift 
+    0x30, // 33 | / international 2
     0x41, // 34 backspace
     0xff, // 35 
     0x45, // 36 escape
-    0xff, // 37 
-    0x66, // 38 left amiga
+    0x67, // 37 right cmd -> right amiga
+    0x66, // 38 left cmd -> left amiga
     0x60, // 39 left shift
     0x62, // 3A caps lock
     0x64, // 3B left alt
-    0x63, // 3C ctrl
-    0xff, // 3D 
-    0xff, // 3E 
-    0xff, // 3F 
+    0x63, // 3C left ctrl -> ctrl
+    0x61, // 3D right shift
+    0x65, // 3E right alt
+    0x63, // 3F right ctrl -> ctrl
     0xff, // 40 
     0xff, // 41 
     0x3c, // 42 Numpad . 
@@ -235,32 +235,32 @@ uint8_t mac_keycodes[] = {
     0xff, // 5E 
     0xff, // 5F 
     0xff, // 60 
-    0x54, // 61 F5 
+    0x54, // 61 F5
     0x55, // 62 F6
-    0x56, // 63 F7 
-    0x52, // 64 F3 
-    0x57, // 65 F8 
+    0x56, // 63 F7
+    0x52, // 64 F3
+    0x57, // 65 F8
     0x58, // 66 F9
     0xff, // 67
-    0x5f, // 68 F11 -> Help
+    0x5f, // 68 F11 -> help (for small mac keyboards without insert)
     0xff, // 69 
-    0xff, // 6A 
+    0x6d, // 6A print screen
     0xff, // 6B 
     0xff, // 6C 
     0xff, // 6D 
-    0x59, // 6E F10 
-    0x67, // 6F Menu key -> Right Amiga (when a regular pc keyboard used on a mac (right of right windows key))
-    0x67, // 70 F12 -> Right Amiga (A solution until synergy hopefully can send both left/right super key)
+    0x59, // 6E F10
+    0x67, // 6F menu key -> right amiga
+    0x67, // 70 F12 -> right amiga (for synergy server that does not send right cmd key)
     0xff, // 71 
-    0xff, // 72 
+    0x6e, // 72 pause / break
     0x5f, // 73 insert/help -> help 
-    0xff, // 74 
-    0xff, // 75 
+    0x70, // 74 home
+    0x48, // 75 page up
     0x46, // 76 delete
     0x53, // 77 F4
-    0xff, // 78 
+    0x71, // 78 end
     0x51, // 79 F2 
-    0xff, // 7A 
+    0x49, // 7A page down
     0x50, // 7B F1
     0x4f, // 7C curs left
     0x4e, // 7D curs right
@@ -312,7 +312,7 @@ uint8_t windows_keycodes[] = {
     0x2a, // 28 "
     0x00, // 29 `
     0x60, // 2A left shift
-    0x2b, // 2B unknown key left of return
+    0x2b, // 2B # / international 1
     0x31, // 2C z
     0x32, // 2D x
     0x33, // 2E c
@@ -338,7 +338,7 @@ uint8_t windows_keycodes[] = {
     0x57, // 42 F8
     0x58, // 43 F9
     0x59, // 44 F10
-    0xff, // 45
+    0x6e, // 45 pause / break
     0xff, // 46
     0x3d, // 47 numpad 7
     0x3e, // 48 numpad 8
@@ -355,9 +355,9 @@ uint8_t windows_keycodes[] = {
     0x3c, // 53 numpad .
     0xff, // 54
     0xff, // 55
-    0x30, // 56 unknown key right of left shift
-    0xff, // 57
-    0x67, // 58 F12 -> right amiga
+    0x30, // 56 # / international 1
+    0x5f, // 57 F11 -> help (for keyboards missing insert)
+    0x67, // 58 F12 -> right amiga (for keyboards missing right windows and menu)
     0xff, // 59
     0xff, // 5A
     0xff, // 5B
@@ -554,7 +554,7 @@ uint8_t windows_keycodes[] = {
     0xff, // 11A
     0xff, // 11B
     0x43, // 11C numpad enter
-    0x63, // 11D right ctrl -> amiga ctrl
+    0x63, // 11D right ctrl -> ctrl
     0xff, // 11E
     0xff, // 11F
     0xff, // 120
@@ -580,8 +580,8 @@ uint8_t windows_keycodes[] = {
     0xff, // 134
     0x5c, // 135 numpad /
     0xff, // 136
-    0xff, // 137
-    0x64, // 138 right alt
+    0x6d, // 137 print screen
+    0x65, // 138 right alt
     0xff, // 139
     0xff, // 13A
     0xff, // 13B
@@ -596,17 +596,17 @@ uint8_t windows_keycodes[] = {
     0xff, // 144
     0x5a, // 145 numlock -> numpad (
     0xff, // 146
-    0xff, // 147
+    0x70, // 147 home
     0x4c, // 148 curs up
-    0xff, // 149
+    0x48, // 149 page up
     0xff, // 14A
     0x4f, // 14B curs left
     0xff, // 14C
     0x4e, // 14D curs right
     0xff, // 14E
-    0xff, // 14F
+    0x71, // 14F end
     0x4d, // 150 curs down
-    0xff, // 151
+    0x49, // 151 page down
     0x5f, // 152 insert -> help
     0x46, // 153 delete
     0xff, // 154
@@ -616,8 +616,8 @@ uint8_t windows_keycodes[] = {
     0xff, // 158
     0xff, // 159
     0xff, // 15A
-    0x66, // 15B left amiga
-    0x67, // 15C right amiga
+    0x66, // 15B left windows -> left amiga
+    0x67, // 15C right windows -> right amiga
     0x67, // 15D windows menu key -> right amiga
     0xff, // 15E
     0xff, // 15F
