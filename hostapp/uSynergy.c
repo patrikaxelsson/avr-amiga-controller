@@ -212,7 +212,10 @@ static void sSendJoystickCallback(uSynergyContext *context, uint8_t joyNum)
 	context->m_joystickCallback(context->m_cookie, joyNum, context->m_joystickButtons[joyNum], sticks[0], sticks[1], sticks[2], sticks[3]);
 }
 
-
+static uint16_t min_u16(uint16_t a, uint16_t b)
+{
+	return a < b ? a : b;
+}
 
 /**
 @brief Parse a single client message, update state, send callbacks and send replies
@@ -226,9 +229,13 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		// Welcome message
 		//		kMsgHello			= "Synergy%2i%2i"
 		//		kMsgHelloBack		= "Synergy%2i%2i%s"
+		uint16_t serverProtocolMajor = sNetToNative16(message+4+7);
+		uint16_t serverProtocolMinor = sNetToNative16(message+4+7+2);
+		context->m_protocolMajor = min_u16(serverProtocolMajor, USYNERGY_PROTOCOL_MAJOR);
+		context->m_protocolMinor = min_u16(serverProtocolMinor, USYNERGY_PROTOCOL_MINOR);
 		sAddString(context, *(message+4)=='S' ? "Synergy" : "Barrier");
-		sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR);
-		sAddUInt16(context, USYNERGY_PROTOCOL_MINOR);
+		sAddUInt16(context, context->m_protocolMajor);
+		sAddUInt16(context, context->m_protocolMinor);
 		sAddUInt32(context, (uint32_t)strlen(context->m_clientName));
 		sAddString(context, context->m_clientName);
 		if (!sSendReply(context))
@@ -421,7 +428,13 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		sSendReply(context);
 		// now reply with CNOP
 	}
-	/*else if (USYNERGY_IS_PACKET("DCLP"))
+	else if (USYNERGY_IS_PACKET("DCLP") && context->m_protocolMajor >= 1 && context->m_protocolMinor >= 6)
+	{
+		char buffer[64];
+		sprintf(buffer, "Ignoring 1.6+ DCLP packet");
+		sTrace(context, buffer);
+	}
+	else if (USYNERGY_IS_PACKET("DCLP"))
 	{
 		// Clipboard message
 		//		kMsgDClipboard		= "DCLP%1i%4i%s"
@@ -453,7 +466,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 
 			parse_msg += size;
 		}
-	}*/
+	}
 	else
 	{
 		// Unknown packet, could be any of these

@@ -356,6 +356,8 @@ typedef struct
 	/* State data, used internall by client, initialized by uSynergyInit() */
 	uSynergyBool					m_connected;									/* Is our socket connected? */
 	uSynergyBool					m_hasReceivedHello;								/* Have we received a 'Hello' from the server? */
+	uint16_t						m_protocolMajor;								/* Protocol major version, agreed between server and client */
+	uint16_t						m_protocolMinor;								/* Protocol minor version, agreed between server and client */
 	uSynergyBool					m_isCaptured;									/* Is Synergy active (i.e. this client is receiving input messages?) */
 	uint32_t						m_lastMessageTime;								/* Time at which last message was received */
 	uint32_t						m_sequenceNumber;								/* Packet sequence number */
