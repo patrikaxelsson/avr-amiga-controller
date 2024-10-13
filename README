@@ -7,7 +7,11 @@ PC.
 
 It works as follows:
 
- - You run a synergy server on your PC (http://synergy-foss.org)
+ - You run one of the following Synergy/Barrier compatible servers on your PC:
+   - Synergy - https://symless.com/synergy
+   - Deskflow - https://github.com/deskflow/deskflow
+   - Barrier - https://github.com/debauchee/barrier
+   - Input Leap - https://github.com/input-leap/input-leap
  - You configure a hotkey to switch to screen "amiga".
  - The input from PC is redirected to the synergy-hw client
       (Find this in the hostapp directory.)
