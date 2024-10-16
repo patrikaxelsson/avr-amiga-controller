@@ -300,13 +300,32 @@ void s_screenActive(uSynergyCookie cookie, uSynergyBool active, int16_t x, int16
     }
 }
 
+enum AmigaKey
+{
+    AmigaKey_LeftShift   = 0x60,
+    AmigaKey_CapsLock    = 0x62,
+    AmigaKey_CursorDown  = 0x4d,
+    AmigaKey_CursorUp    = 0x4c,
+    AmigaKey_CursorLeft  = 0x4f,
+    AmigaKey_CursorRight = 0x4e,
+    AmigaKey_WheelDown   = 0x7b,
+    AmigaKey_WheelUp     = 0x7a,
+    AmigaKey_WheelLeft   = 0x7c,
+    AmigaKey_WheelRight  = 0x7d,
+};
+
 void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
              int16_t wheelY, uSynergyBool buttonLeft, uSynergyBool buttonRight,
              uSynergyBool buttonMiddle)
 {
     static uint8_t old_mstate = 0;
+    static int16_t old_wheelX = 0;
+    static int16_t old_wheelY = 0;
     uint8_t mstate =
         (buttonLeft ? 1 : 0) | (buttonRight ? 2 : 0) | (buttonMiddle ? 4 : 0);
+    int16_t scrollX = wheelX - old_wheelX;
+    int16_t scrollY = wheelY - old_wheelY;
+    int i;
 
     if(mouseAbsHasMoved(x, y)) {
         if(lastMouseMoveWasRelative) {
@@ -323,6 +342,25 @@ void s_mouse(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX,
             if (debugLevel > 1) fprintf(stderr, "mouse, button=%d,%d,%d\n", buttonLeft, buttonMiddle, buttonRight);
         }
     }
+    // From testing, the synergy server sends exactly 120 X or Y per input scroll step
+    for(int i = 0; i > scrollX; i -= 120)
+    {
+        usb_send_amiga_key(AmigaKey_WheelRight, 0);
+    }
+    for(int i = 0; i < scrollX; i += 120)
+    {
+        usb_send_amiga_key(AmigaKey_WheelLeft, 0);
+    }
+    for(int i = 0; i > scrollY; i -= 120)
+    {
+        usb_send_amiga_key(AmigaKey_WheelDown, 0);
+    }
+    for(int i = 0; i < scrollY; i += 120)
+    {
+        usb_send_amiga_key(AmigaKey_WheelUp, 0);
+    }
+    old_wheelX = wheelX;
+    old_wheelY = wheelY;
 }
 
 void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
@@ -334,36 +372,29 @@ void s_mouserel(uSynergyCookie cookie, int16_t x, int16_t y)
 }
 
 int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
-    static const uint8_t amigaLeftShift = 0x60;
-    static const uint8_t amigaCapsLock = 0x62;
-    static const uint8_t amigaCursorDown = 0x4d;
-    static const uint8_t amigaCursorUp = 0x4c;
-    static const uint8_t amigaCursorLeft = 0x4f;
-    static const uint8_t amigaCursorRight = 0x4e;
-
     int didSpecialStuff = 0;
 
     switch(serverType) {
         case Linux:
             switch (key) {
                 case 0x75: // Page down
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorDown, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorDown, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x70: // Page up
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorUp, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorUp, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x6e: // Home
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorLeft, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x73: // End
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorRight, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorRight, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x42: // Caps lock
@@ -371,7 +402,7 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                         // If caps lock is pressed down and modifiers has not caps lock set, then
                         // send caps down to amiga, else send caps up
                         uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
-                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
+                        usb_send_amiga_key(AmigaKey_CapsLock, capsKeyUp);
                     }
                     didSpecialStuff = 1;
                     break;
@@ -380,23 +411,23 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
         case Mac:
             switch (key) {
                 case 0x7a: // Page down
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorDown, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorDown, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x75: // Page up
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorUp, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorUp, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x74: // Home
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorLeft, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x78: // End
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorRight, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorRight, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x3a: // Caps lock
@@ -404,7 +435,7 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                         // If caps lock is pressed down and modifiers has not caps lock set, then
                         // send caps down to amiga, else send caps up
                         uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 0 : 1;
-                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
+                        usb_send_amiga_key(AmigaKey_CapsLock, capsKeyUp);
                     }
                     didSpecialStuff = 1;
                     break;
@@ -413,23 +444,23 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
         case Windows:
             switch (key) {
                 case 0x151: // Page down
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorDown, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorDown, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x149: // Page up
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorUp, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorUp, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x147: // Home
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorLeft, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorLeft, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x14f: // End
-                    usb_send_amiga_key(amigaLeftShift, !down);
-                    usb_send_amiga_key(amigaCursorRight, !down);
+                    usb_send_amiga_key(AmigaKey_LeftShift, !down);
+                    usb_send_amiga_key(AmigaKey_CursorRight, !down);
                     didSpecialStuff = 1;
                     break;
                 case 0x3a: // Caps lock
@@ -437,7 +468,7 @@ int doSpecialKeyActions(uint16_t key, uint16_t modifiers, uSynergyBool down) {
                         // If caps lock is pressed down and modifiers has not caps lock set, then
                         // send caps down to amiga, else send caps up
                         uint8_t capsKeyUp = modifiers & USYNERGY_MODIFIER_CAPSLOCK ? 1 : 0;
-                        usb_send_amiga_key(amigaCapsLock, capsKeyUp);
+                        usb_send_amiga_key(AmigaKey_CapsLock, capsKeyUp);
                     }
                     didSpecialStuff = 1;
                     break;
